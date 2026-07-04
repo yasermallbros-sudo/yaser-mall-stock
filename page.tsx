@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default function EmployeePage() {
+export default function EmployeeSafePage() {
   const script = `
     const grid = document.querySelector("[data-products]");
     const status = document.querySelector("[data-status]");
@@ -9,16 +9,21 @@ export default function EmployeePage() {
     function money(value) {
       return "JOD " + Number(value || 0).toFixed(2);
     }
+    function escapeText(value) {
+      return String(value ?? "").replace(/[&<>"']/g, function(char) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char];
+      });
+    }
     function card(product) {
-      const image = product.imageUrl || "/placeholder.svg";
-      return '<article data-product-id="' + product.id + '" class="overflow-hidden rounded-xl border bg-white shadow-sm">' +
+      const image = escapeText(product.imageUrl || "/placeholder.svg");
+      return '<article data-product-id="' + escapeText(product.id) + '" class="overflow-hidden rounded-xl border bg-white shadow-sm">' +
         '<div class="relative h-44 bg-white"><img src="' + image + '" alt="" class="h-full w-full object-contain p-3" loading="lazy" /></div>' +
         '<div class="space-y-2 p-3">' +
-        '<div class="text-xs text-slate-500">' + product.id + '</div>' +
-        '<h2 class="min-h-10 text-sm font-semibold leading-5">' + (product.englishName || product.arabicName || "Product") + '</h2>' +
-        '<p class="min-h-8 text-xs text-slate-600" dir="rtl">' + (product.arabicName || "") + '</p>' +
-        '<div class="rounded-lg bg-slate-100 p-2 text-xs text-slate-600"><p><b>Main:</b> ' + (product.mainCategory || "-") + '</p><p><b>Sub:</b> ' + (product.subCategory || "-") + '</p></div>' +
-        '<div class="flex items-center justify-between"><b class="text-emerald-700">' + money(product.priceJod) + '</b><span class="text-xs text-slate-500">Qty ' + (product.quantity ?? "-") + '</span></div>' +
+        '<div class="text-xs text-slate-500">' + escapeText(product.id) + '</div>' +
+        '<h2 class="min-h-10 text-sm font-semibold leading-5">' + escapeText(product.englishName || product.arabicName || "Product") + '</h2>' +
+        '<p class="min-h-8 text-xs text-slate-600" dir="rtl">' + escapeText(product.arabicName || "") + '</p>' +
+        '<div class="rounded-lg bg-slate-100 p-2 text-xs text-slate-600"><p><b>Main:</b> ' + escapeText(product.mainCategory || "-") + '</p><p><b>Sub:</b> ' + escapeText(product.subCategory || "-") + '</p></div>' +
+        '<div class="flex items-center justify-between"><b class="text-emerald-700">' + money(product.priceJod) + '</b><span class="text-xs text-slate-500">Qty ' + escapeText(product.quantity ?? "-") + '</span></div>' +
         '<div class="grid grid-cols-2 gap-2"><button data-action="IN_STOCK" class="h-11 rounded-lg bg-emerald-700 font-semibold text-white">In</button><button data-action="OUT_OF_STOCK" class="h-11 rounded-lg bg-red-600 font-semibold text-white">Out</button></div>' +
         '</div></article>';
     }
@@ -30,11 +35,11 @@ export default function EmployeePage() {
         const data = await response.json();
         const products = Array.isArray(data.products) ? data.products : [];
         count.textContent = String(products.length);
-        grid.innerHTML = products.map(card).join("") || '<div class="rounded-xl border bg-white p-6 text-center text-sm text-slate-600">No products loaded yet. Use Catalog sync now from admin, then refresh.</div>';
+        grid.innerHTML = products.map(card).join("") || '<div class="rounded-xl border bg-white p-6 text-center text-sm text-slate-600">No products loaded yet.</div>';
         status.textContent = "Ready";
       } catch (error) {
-        status.textContent = "Could not load live items. The page is online; check Render logs for the product API.";
-        grid.innerHTML = '<div class="rounded-xl border bg-white p-6 text-center text-sm text-slate-600">Employee page opened successfully. Product loading needs the API/log fix next.</div>';
+        status.textContent = "Employee page opened. Product API needs logs.";
+        grid.innerHTML = '<div class="rounded-xl border bg-white p-6 text-center text-sm text-slate-600">The employee link is online. Product loading needs the product API fix next.</div>';
       }
     }
     document.addEventListener("click", async (event) => {
