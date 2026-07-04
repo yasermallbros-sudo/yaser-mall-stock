@@ -3,8 +3,7 @@ services:
     name: yaser-mall-stock
     runtime: node
     plan: starter
-    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run db:seed && npm run build
-    startCommand: npm run start -- -p $PORT
+    buildCommand: npm ci && npx prisma generate && npx prisma db push && npm run db:seed && npm run build    startCommand: npm run start -- -p $PORT
     autoDeploy: true
     envVars:
       - key: DATABASE_URL
