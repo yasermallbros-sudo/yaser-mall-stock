@@ -1,6 +1,6 @@
 import { EmployeeReadyApp } from "@/components/products/employee-ready-app";
 import { readAuditMap } from "@/lib/audit-store";
-import { getLiveProductsPage, starterLiveProductsPage } from "@/lib/live-products-file";
+import { getLiveProductsPage, type LiveProductsPage } from "@/lib/live-products-file";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,6 +24,37 @@ function normalizeCategory(value: string) {
   return value;
 }
 
+function starterEmployeePage(): LiveProductsPage {
+  return {
+    fetchedAt: "2026-07-04T00:00:00.000Z",
+    source: "Starter deploy catalog",
+    categoryCount: 1,
+    uniqueProductCount: 1,
+    inStock: 1,
+    outOfStock: 0,
+    categories: ["Starter"],
+    subCategories: ["Starter"],
+    categoryTree: { Starter: ["Starter"] },
+    categoryImages: { Starter: "/placeholder.svg" },
+    totalFiltered: 1,
+    products: [
+      {
+        id: "starter-product",
+        englishName: "Starter product",
+        arabicName: "\u0645\u0646\u062a\u062c \u062a\u062c\u0631\u064a\u0628\u064a",
+        priceJod: 0,
+        imageUrl: "/placeholder.svg",
+        brand: "Yaser Mall",
+        mainCategory: "Starter",
+        subCategory: "Starter",
+        sourceStock: "IN_STOCK",
+        productUrl: "https://yasermallonline.com/en/home",
+        allCategories: ["Starter"]
+      }
+    ]
+  };
+}
+
 export default async function EmployeePage({ searchParams }: PageProps) {
   const params = await searchParams;
   const query = first(params?.q) ?? "";
@@ -34,7 +65,7 @@ export default async function EmployeePage({ searchParams }: PageProps) {
   const [initialData, auditRecords] = await Promise.all([
     getLiveProductsPage({ q: query, category, subCategory, status, limit, forceFresh: Boolean(category || subCategory) }).catch((error) => {
       console.error("Employee live products failed", error);
-      return starterLiveProductsPage();
+      return starterEmployeePage();
     }),
     readAuditMap().catch((error) => {
       console.error("Employee audit map failed", error);
