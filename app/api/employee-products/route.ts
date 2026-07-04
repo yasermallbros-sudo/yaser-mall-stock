@@ -225,7 +225,7 @@ function labelTokens(value: string) {
     .split(/[^\p{L}\p{N}]+/u)
     .map((token) => token.replace(/^وال/, "").replace(/^ال/, "").replace(/^و/, ""))
     .map((token) => token.replace(/(ات|يه|ية|ه|ة)$/u, ""))
-    .filter((token) => token.length >= 4);
+    .filter((token) => token.length >= 3 && token !== "and");
 }
 
 function labelMatches(left: string, right: string) {
