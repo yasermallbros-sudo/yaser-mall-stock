@@ -2,7 +2,7 @@ services:
   - type: web
     name: yaser-mall-stock
     runtime: node
-    plan: basic-256mb
+    plan: starter
     buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run db:seed && npm run build
     startCommand: npm run start -- -p $PORT
     autoDeploy: true
