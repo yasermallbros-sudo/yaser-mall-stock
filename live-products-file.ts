@@ -66,7 +66,7 @@ const monthlyBestOfferFilters: OfferFilterGroup[] = [
   { label: "Tea & Coffee", targets: ["\u0627\u0644\u0634\u0627\u064a \u0648\u0627\u0644\u0642\u0647\u0648\u0629"] }
 ];
 
-function starterLiveProductData(): LiveProductData {
+export function starterLiveProductData(): LiveProductData {
   return {
     fetchedAt: "2026-07-04T00:00:00.000Z",
     source: "Starter deploy catalog",
@@ -89,6 +89,18 @@ function starterLiveProductData(): LiveProductData {
         allCategories: ["Starter"]
       }
     ]
+  };
+}
+
+export function starterLiveProductsPage(): LiveProductsPage {
+  const data = starterLiveProductData();
+  return {
+    ...data,
+    categories: ["Starter"],
+    subCategories: ["Starter"],
+    categoryTree: { Starter: ["Starter"] },
+    categoryImages: { Starter: "/placeholder.svg" },
+    totalFiltered: data.products.length
   };
 }
 
