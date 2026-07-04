@@ -1,2 +1,21 @@
-# yaser-mall-stock
-Internal inventory audit system for Yaser Mall Stock
+services:
+  - type: web
+    name: yaser-mall-stock
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run db:seed && npm run build
+    startCommand: npm run start -- -p $PORT
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: yaser-mall-stock-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+
+databases:
+  - name: yaser-mall-stock-db
+    plan: starter
