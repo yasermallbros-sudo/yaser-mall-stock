@@ -1,0 +1,2 @@
+export const auditStatuses = ["IN_STOCK", "OUT_OF_STOCK", "LOW_STOCK", "WRONG_IMAGE", "WRONG_NAME", "WRONG_PRICE", "WRONG_CATEGORY", "DUPLICATE_PRODUCT"] as const;
+export const auditLabels: Record<(typeof auditStatuses)[number], string> = { IN_STOCK: "In Stock", OUT_OF_STOCK: "Out of Stock", LOW_STOCK: "Low Stock", WRONG_IMAGE: "Wrong Image", WRONG_NAME: "Wrong Name", WRONG_PRICE: "Wrong Price", WRONG_CATEGORY: "Wrong Category", DUPLICATE_PRODUCT: "Duplicate Product" };

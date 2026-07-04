@@ -1,0 +1,55 @@
+{
+  "name": "Yaser Mall Stock",
+  "short_name": "Yaser Stock",
+  "description": "Employee stock checking app for Yaser Mall",
+  "start_url": "/employee?status=IN_STOCK",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#166534",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/icons/yaser-stock-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/yaser-stock-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Employee Check",
+      "short_name": "Employee",
+      "url": "/employee?status=IN_STOCK",
+      "icons": [
+        {
+          "src": "/icons/yaser-stock-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Admin Plan",
+      "short_name": "Admin",
+      "url": "/admin/items",
+      "icons": [
+        {
+          "src": "/icons/yaser-stock-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}

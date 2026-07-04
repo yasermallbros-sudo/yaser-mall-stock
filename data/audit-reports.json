@@ -1,0 +1,629 @@
+{
+  "819": {
+    "productId": "819",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:17:41.864Z",
+    "hideUntil": "2026-08-01T17:17:41.864Z",
+    "product": {
+      "id": "819",
+      "englishName": "Baby Cucumber Pickled 6",
+      "arabicName": "مخلل خيار بيبي  ",
+      "priceJod": 1.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FBaby+Cucumber+Pickled+6.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "الديلي ",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/819",
+      "sourceStock": "IN_STOCK",
+      "quantity": 1,
+      "allCategories": [
+        "الديلي "
+      ]
+    }
+  },
+  "822": {
+    "productId": "822",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:17:41.263Z",
+    "hideUntil": "2026-08-01T17:17:41.263Z",
+    "product": {
+      "id": "822",
+      "englishName": "Green olives stuffed with carrots6",
+      "arabicName": "زيتون اخضر محشي جزر  ",
+      "priceJod": 3.49,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FGreen+olives+stuffed+with+carrots6.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "الديلي ",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/822",
+      "sourceStock": "IN_STOCK",
+      "quantity": 541,
+      "allCategories": [
+        "الديلي "
+      ]
+    }
+  },
+  "827": {
+    "productId": "827",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:17:44.254Z",
+    "hideUntil": "2026-08-01T17:17:44.254Z",
+    "product": {
+      "id": "827",
+      "englishName": "Jerash green olives",
+      "arabicName": "زيتون اخضر جرش",
+      "priceJod": 2.25,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FJerash+green+olives.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "الديلي ",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/827",
+      "sourceStock": "IN_STOCK",
+      "quantity": 9,
+      "allCategories": [
+        "الديلي "
+      ]
+    }
+  },
+  "836": {
+    "productId": "836",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:17:43.616Z",
+    "hideUntil": "2026-08-01T17:17:43.616Z",
+    "product": {
+      "id": "836",
+      "englishName": "Olives Jarjer3",
+      "arabicName": "زيتون جرجير ",
+      "priceJod": 3.59,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FOlives+Jarjer3.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "الديلي ",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/836",
+      "sourceStock": "IN_STOCK",
+      "quantity": 1,
+      "allCategories": [
+        "عروض يومية",
+        "الديلي "
+      ]
+    }
+  },
+  "1778": {
+    "productId": "1778",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:10.830Z",
+    "hideUntil": "2026-08-01T17:04:10.830Z",
+    "product": {
+      "id": "1778",
+      "englishName": "sunny",
+      "arabicName": "صني سي ثمار البحر مشكلة 500 غم",
+      "priceJod": 4.59,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FLine+11%2Fsunny.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "المجمدات",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/1778",
+      "sourceStock": "IN_STOCK",
+      "quantity": 7,
+      "allCategories": [
+        "المجمدات"
+      ]
+    }
+  },
+  "1813": {
+    "productId": "1813",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:12.422Z",
+    "hideUntil": "2026-08-01T17:04:12.422Z",
+    "product": {
+      "id": "1813",
+      "englishName": "Siniora Beef Shawerma 400g3",
+      "arabicName": "سنيورة شاورمة لحمة 400 غم",
+      "priceJod": 0,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FLine+19%2FSiniora+Beef+Shawerma+400g3.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "السنيورة",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/1813",
+      "sourceStock": "IN_STOCK",
+      "quantity": 39,
+      "allCategories": [
+        "المجمدات",
+        "السنيورة"
+      ]
+    }
+  },
+  "1815": {
+    "productId": "1815",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:11.870Z",
+    "hideUntil": "2026-08-01T17:04:11.870Z",
+    "product": {
+      "id": "1815",
+      "englishName": "Siniora chicken Shawerma 400gm33",
+      "arabicName": "سنيورة شاورما دجاج 400 غم",
+      "priceJod": 3.45,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2F---AAAA%2FSiniora+chicken+Shawerma+400gm33.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "السنيورة",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/1815",
+      "sourceStock": "IN_STOCK",
+      "quantity": 11,
+      "allCategories": [
+        "المجمدات",
+        "السنيورة"
+      ]
+    }
+  },
+  "2493": {
+    "productId": "2493",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:14.244Z",
+    "hideUntil": "2026-08-01T17:04:14.244Z",
+    "product": {
+      "id": "2493",
+      "englishName": "Nabil Chicken Burgers Breaded 15pcs 840gm",
+      "arabicName": "نبيل برجر دجاج بالبقسماط 15 قطعة 840 جم",
+      "priceJod": 0,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FNabil+Chicken+Burgers+Breaded+15pcs+840gm.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "بالجملة",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/2493",
+      "sourceStock": "IN_STOCK",
+      "quantity": 128,
+      "allCategories": [
+        "نبيل فود",
+        "المجمدات",
+        "بالجملة"
+      ]
+    }
+  },
+  "2543": {
+    "productId": "2543",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:22.255Z",
+    "hideUntil": "2026-08-01T17:04:22.255Z",
+    "product": {
+      "id": "2543",
+      "englishName": "Nabil Chicken Hotdog 340gm 10pcs",
+      "arabicName": "نبيل نقانق  دجاج 340 جم 10 قطع",
+      "priceJod": 0.75,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2F---AAAA%2FNabil+Chicken+Hotdog+340gm+10pcs.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "المجمدات",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/2543",
+      "sourceStock": "IN_STOCK",
+      "quantity": 401,
+      "allCategories": [
+        "نبيل فود",
+        "المجمدات"
+      ]
+    }
+  },
+  "2589": {
+    "productId": "2589",
+    "status": "OUT_OF_STOCK",
+    "checkedAt": "2026-07-02T17:04:14.845Z",
+    "hideUntil": "2026-08-01T17:04:14.845Z",
+    "product": {
+      "id": "2589",
+      "englishName": "Zamzam Drinking Water 5L",
+      "arabicName": "مياه زمزم للشرب 5 لتر",
+      "priceJod": 5.49,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FZamzam+Drinking+Water+5L.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "بالجملة",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/2589",
+      "sourceStock": "IN_STOCK",
+      "quantity": 818,
+      "allCategories": [
+        "المياه ",
+        "بالجملة"
+      ]
+    }
+  },
+  "11023": {
+    "productId": "11023",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T19:12:31.647Z",
+    "hideUntil": "2026-08-01T19:12:31.647Z",
+    "product": {
+      "id": "11023",
+      "englishName": "Sunbulah Natural floral Honey 1 Kg",
+      "arabicName": "عسل السنبلة الزهور الطبيعي 1 كجم",
+      "priceJod": 8.95,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FSunbulah+Natural+floral+Honey+1+Kg.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "عسل ومربى وطحينة",
+      "subCategory": "العسل",
+      "productUrl": "https://yasermallonline.com/en/product/11023",
+      "sourceStock": "IN_STOCK",
+      "quantity": 1093,
+      "allCategories": [
+        "أفضل العروض الشهرية",
+        "العسل والمربى والطحينة",
+        "السنبلة",
+        "عسل",
+        "عسل ومربى وطحينة",
+        "العسل"
+      ]
+    }
+  },
+  "224100": {
+    "productId": "224100",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T19:12:32.397Z",
+    "hideUntil": "2026-08-01T19:12:32.397Z",
+    "product": {
+      "id": "224100",
+      "englishName": "Vitrac Apricot Jam 850 g",
+      "arabicName": "فيتراك مربى المشمش 850 جم + مربى الفراولة 230 جم",
+      "priceJod": 1.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FVitrac+Apricot+Jam+850+g.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "عسل ومربى وطحينة",
+      "subCategory": "المربى",
+      "productUrl": "https://yasermallonline.com/en/product/224100",
+      "sourceStock": "IN_STOCK",
+      "quantity": 686,
+      "allCategories": [
+        "أفضل العروض الشهرية",
+        "العسل والمربى والطحينة",
+        "عسل ومربى وطحينة",
+        "المربى"
+      ]
+    }
+  },
+  "237613": {
+    "productId": "237613",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:42.551Z",
+    "hideUntil": "2026-08-01T17:10:42.551Z",
+    "product": {
+      "id": "237613",
+      "englishName": "Evo Clean rose touch Multi Purpose surface Cleaner 1.25",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة الورد 1.25 لتر",
+      "priceJod": 1.29,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+rose+touch+Multi-Purpose+surface+Cleaner+1.25.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237613",
+      "sourceStock": "IN_STOCK",
+      "quantity": 170,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237614": {
+    "productId": "237614",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:42.669Z",
+    "hideUntil": "2026-08-01T17:10:42.669Z",
+    "product": {
+      "id": "237614",
+      "englishName": "Evo Clean pine soul Multi Purpose surface Cleaner 2.",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة الصنوبر 2.4 لتر",
+      "priceJod": 1.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+pine+soul+Multi-Purpose+surface+Cleaner+2..jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237614",
+      "sourceStock": "IN_STOCK",
+      "quantity": 112,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237615": {
+    "productId": "237615",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:42.723Z",
+    "hideUntil": "2026-08-01T17:10:42.723Z",
+    "product": {
+      "id": "237615",
+      "englishName": "Evo Clean purple bloom Multi Purpose surface Cleaner 2",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة البنفسج 2.4 لتر",
+      "priceJod": 1.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+purple+bloom+Multi-Purpose+surface+Cleaner+2.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237615",
+      "sourceStock": "IN_STOCK",
+      "quantity": 76,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237616": {
+    "productId": "237616",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:47.498Z",
+    "hideUntil": "2026-08-01T17:10:47.498Z",
+    "product": {
+      "id": "237616",
+      "englishName": "Evo Clean purple bloom Multi Purpose surface Cleaner 1.25",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة البنفسج 1.25 لتر",
+      "priceJod": 1.29,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+purple+bloom+Multi-Purpose+surface+Cleaner+1.25.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237616",
+      "sourceStock": "IN_STOCK",
+      "quantity": 113,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237617": {
+    "productId": "237617",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-03T09:22:21.527Z",
+    "hideUntil": "2026-08-02T09:22:21.527Z",
+    "product": {
+      "id": "237617",
+      "englishName": "Evo Clean rose touch Multi Purpose surface Cleaner 2.4",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة الورد 2.4 لتر",
+      "priceJod": 1.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+rose+touch+Multi-Purpose+surface+Cleaner+2.4.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "منظف متعدد الاستعمال",
+      "productUrl": "https://yasermallonline.com/en/product/237617",
+      "sourceStock": "IN_STOCK",
+      "quantity": 103,
+      "allCategories": [
+        "ادوات التنظيف المنزلي",
+        "منظف الارضيات",
+        "منظف متعدد الاستعمال",
+        "إيفو كلين",
+        "منظف ​​متعدد الاستخدامات"
+      ]
+    }
+  },
+  "237646": {
+    "productId": "237646",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:47.993Z",
+    "hideUntil": "2026-08-01T17:10:47.993Z",
+    "product": {
+      "id": "237646",
+      "englishName": "Evo Clean blue Fabric Softener freshener advance formula 2L",
+      "arabicName": "منعم ومعطر أقمشة إيفو كلين بلو بتركيبة متطورة 2 لتر",
+      "priceJod": 2.25,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+blue+Fabric+Softener++freshener+advance+formula+2L.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "مسحوق الغسيل",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237646",
+      "sourceStock": "IN_STOCK",
+      "quantity": 6,
+      "allCategories": [
+        "إيفو كلين",
+        "مسحوق الغسيل"
+      ]
+    }
+  },
+  "237682": {
+    "productId": "237682",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:46.768Z",
+    "hideUntil": "2026-08-01T17:10:46.768Z",
+    "product": {
+      "id": "237682",
+      "englishName": "Evo Clean Dishwashing Liquid Strawberry 4X more power 900ml3",
+      "arabicName": "ايفو كلين  سائل جلي الأواني برائحة الفراولة 900 مل",
+      "priceJod": 0,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Dishwashing+Liquid+Strawberry+4X+more+power+900ml3.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237682",
+      "sourceStock": "IN_STOCK",
+      "quantity": 152,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237684": {
+    "productId": "237684",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:48.684Z",
+    "hideUntil": "2026-08-01T17:10:48.684Z",
+    "product": {
+      "id": "237684",
+      "englishName": "Evo Clean Dishwashing Liquid Apple 4X more power 900ml3",
+      "arabicName": "سائل غسيل الأطباق إيفو كلين برائحة التفاح، قوة مضاعفة 4 مرات، 900 مل",
+      "priceJod": 0.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Dishwashing+Liquid+Apple+4X+more+power+900ml3.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237684",
+      "sourceStock": "IN_STOCK",
+      "quantity": 125,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237685": {
+    "productId": "237685",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:53.793Z",
+    "hideUntil": "2026-08-01T17:10:53.793Z",
+    "product": {
+      "id": "237685",
+      "englishName": "Evo Clean Dishwashing Liquid lavender 4X more power 900ml3",
+      "arabicName": "سائل غسيل الأطباق إيفو كلين برائحة اللافندر، قوة إضافية 4 مرات، 900 مل",
+      "priceJod": 0.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Dishwashing+Liquid+lavender+4X+more+power+900ml3.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237685",
+      "sourceStock": "IN_STOCK",
+      "quantity": 129,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237686": {
+    "productId": "237686",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:55.110Z",
+    "hideUntil": "2026-08-01T17:10:55.110Z",
+    "product": {
+      "id": "237686",
+      "englishName": "Evo Clean Dishwashing Liquid platinum 4X more power 900ml",
+      "arabicName": "سائل غسيل الأطباق إيفو كلين بلاتينيوم، قوة إضافية 4 مرات، 900 مل",
+      "priceJod": 0.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Dishwashing+Liquid+platinum+4X+more+power+900ml.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237686",
+      "sourceStock": "IN_STOCK",
+      "quantity": 223,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237687": {
+    "productId": "237687",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:50.995Z",
+    "hideUntil": "2026-08-01T17:10:50.995Z",
+    "product": {
+      "id": "237687",
+      "englishName": "Evo Clean Desert oud Multi Purpose surface Cleaner 1.25l6",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة العود 1.25 لتر",
+      "priceJod": 1.29,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Desert+oud+Multi-Purpose+surface+Cleaner+1.25l6.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237687",
+      "sourceStock": "IN_STOCK",
+      "quantity": 89,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237688": {
+    "productId": "237688",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:50.450Z",
+    "hideUntil": "2026-08-01T17:10:50.450Z",
+    "product": {
+      "id": "237688",
+      "englishName": "Evo Clean Dishwashing Liquid Lemon 4X more power 900ml3",
+      "arabicName": "سائل غسيل الأطباق إيفو كلين برائحة الليمون، قوة مضاعفة 4 مرات، 900 مل",
+      "priceJod": 0.99,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+Dishwashing+Liquid+Lemon+4X+more+power+900ml3.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237688",
+      "sourceStock": "IN_STOCK",
+      "quantity": 239,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237689": {
+    "productId": "237689",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:54.251Z",
+    "hideUntil": "2026-08-01T17:10:54.251Z",
+    "product": {
+      "id": "237689",
+      "englishName": "Evo Clean citrus purity Multi Purpose surface Cleaner 1.25l6",
+      "arabicName": "منظف ​​الأسطح متعدد الأغراض إيفو كلين برائحة الحمضيات النقية 1.25 لتر",
+      "priceJod": 1.29,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+citrus+purity+Multi-Purpose+surface+Cleaner+1.25l6.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "ادوات التنظيف المنزلي",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237689",
+      "sourceStock": "IN_STOCK",
+      "quantity": 44,
+      "allCategories": [
+        "إيفو كلين",
+        "ادوات التنظيف المنزلي"
+      ]
+    }
+  },
+  "237696": {
+    "productId": "237696",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:10:57.115Z",
+    "hideUntil": "2026-08-01T17:10:57.115Z",
+    "product": {
+      "id": "237696",
+      "englishName": "Evo Clean White Laundry Detergent 3X more powerful 3",
+      "arabicName": "منظف ​​الغسيل إيفو كلين وايت أقوى بثلاث مرات، 3 لتر",
+      "priceJod": 4.59,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+White+Laundry+Detergent+3X+more+powerful+3.png",
+      "brand": "Yaser Mall",
+      "mainCategory": "مسحوق الغسيل",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237696",
+      "sourceStock": "IN_STOCK",
+      "quantity": 1,
+      "allCategories": [
+        "إيفو كلين",
+        "مسحوق الغسيل"
+      ]
+    }
+  },
+  "237706": {
+    "productId": "237706",
+    "status": "IN_STOCK",
+    "checkedAt": "2026-07-02T17:11:07.075Z",
+    "hideUntil": "2026-08-01T17:11:07.075Z",
+    "product": {
+      "id": "237706",
+      "englishName": "Evo Clean White Fabric Sof",
+      "arabicName": "منعم ومعطر أقمشة إيفو كلين وايت بتركيبة متطورة 2 لتر",
+      "priceJod": 2.25,
+      "imageUrl": "https://uploads.yasermallonline.com/catalog%2FEvo+Clean+White+Fabric+Sof.jpg",
+      "brand": "Yaser Mall",
+      "mainCategory": "مسحوق الغسيل",
+      "subCategory": "",
+      "productUrl": "https://yasermallonline.com/en/product/237706",
+      "sourceStock": "IN_STOCK",
+      "quantity": 1,
+      "allCategories": [
+        "إيفو كلين",
+        "مسحوق الغسيل"
+      ]
+    }
+  }
+}

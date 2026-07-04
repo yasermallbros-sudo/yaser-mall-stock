@@ -1,0 +1,15 @@
+import { auditLabels, auditStatuses } from "@/lib/audit";
+import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getReports } from "@/lib/reports";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const user = await requireUser(); const filters = await searchParams;
+  const [reports, users, categories, brands] = await Promise.all([getReports(filters), prisma.user.findMany({ orderBy: { name: "asc" } }), prisma.product.findMany({ distinct: ["category"], select: { category: true }, where: { category: { not: null } } }), prisma.product.findMany({ distinct: ["brand"], select: { brand: true }, where: { brand: { not: null } } })]);
+  const query = new URLSearchParams(Object.entries(filters).filter(([, v]) => Boolean(v)) as [string, string][]).toString();
+  return <AppShell user={user}><div className="space-y-5"><div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Reports</h1><div className="flex gap-2"><Button asChild variant="outline"><a href={`/api/reports/export?format=xlsx&${query}`}>Excel</a></Button><Button asChild variant="outline"><a href={`/api/reports/export?format=pdf&${query}`}>PDF</a></Button></div></div><Card><CardContent className="pt-5"><form className="grid gap-3 md:grid-cols-6"><select name="employee" className="h-10 rounded-md border bg-background px-3"><option value="">Employee</option>{users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select><Input name="date" type="date" defaultValue={filters.date} /><select name="category" className="h-10 rounded-md border bg-background px-3"><option value="">Category</option>{categories.map((c) => <option key={c.category!}>{c.category}</option>)}</select><select name="brand" className="h-10 rounded-md border bg-background px-3"><option value="">Brand</option>{brands.map((b) => <option key={b.brand!}>{b.brand}</option>)}</select><select name="status" className="h-10 rounded-md border bg-background px-3"><option value="">Status</option>{auditStatuses.map((s) => <option key={s} value={s}>{auditLabels[s]}</option>)}</select><Button>Filter</Button></form></CardContent></Card><div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full text-sm"><thead className="bg-muted text-left"><tr><th className="p-3">Date</th><th>Employee</th><th>Product</th><th>Status</th><th>Category</th><th>Brand</th><th>Notes</th></tr></thead><tbody>{reports.map((r) => <tr key={r.id} className="border-t"><td className="p-3">{r.createdAt.toLocaleDateString()}</td><td>{r.user.name}</td><td>{r.product.englishName}</td><td>{auditLabels[r.status]}</td><td>{r.product.category}</td><td>{r.product.brand}</td><td>{r.notes}</td></tr>)}</tbody></table></div></div></AppShell>;
+}
