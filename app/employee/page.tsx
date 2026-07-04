@@ -133,8 +133,19 @@ export default function EmployeePage() {
 
       <div className="mx-auto max-w-5xl space-y-4 px-3 py-4">
         <section className="rounded-xl bg-emerald-800 px-4 py-5 text-white shadow-sm">
-          <h1 className="text-xl font-bold">Live Stock Check</h1>
-          <p className="text-sm text-emerald-50">Tap In or Out. Checked items are removed from this page.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-xl font-bold">Live Stock Check</h1>
+              <p className="text-sm text-emerald-50">Tap In or Out. Checked items are removed for 30 days.</p>
+            </div>
+            <form action="/employee/sync-catalog" method="post">
+              <input type="hidden" name="returnTo" value="/employee?status=IN_STOCK" />
+              <input type="hidden" name="maxProducts" value="5000" />
+              <button type="submit" className="h-11 rounded-lg bg-white px-4 text-sm font-bold text-emerald-800">
+                Sync data now
+              </button>
+            </form>
+          </div>
         </section>
 
         <section className="grid grid-cols-2 gap-2">
