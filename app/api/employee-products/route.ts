@@ -81,7 +81,35 @@ async function readFullLiveCatalog() {
     products.push(...index.products);
   }
 
+  if (products.length === 0) {
+    throw new Error("Full live product parts are not available.");
+  }
+
   return { ...index, products };
+}
+
+async function readPublicInStockCatalog() {
+  const publicDir = path.join(process.cwd(), "public");
+  const files = ["yaser-live-instock-products.json", "yaser-live-instock-products.txt"];
+
+  for (const fileName of files) {
+    try {
+      const catalog = await readJson<Catalog>(path.join(publicDir, fileName));
+      if (Array.isArray(catalog.products) && catalog.products.length > 0) {
+        return {
+          ...catalog,
+          products: catalog.products.map((product) => ({
+            ...product,
+            sourceStock: product.sourceStock || "IN_STOCK",
+          })),
+        };
+      }
+    } catch {
+      // Try the next public catalog file.
+    }
+  }
+
+  throw new Error("Public in-stock catalog is not available.");
 }
 
 async function readCatalog() {
@@ -99,21 +127,30 @@ async function readCatalog() {
     };
   } catch {
     try {
-      cachedCatalog = await readJson<Catalog>(path.join(process.cwd(), "data", "fast-catalog.json"));
-    } catch {
+      const inStockCatalog = await readPublicInStockCatalog();
       cachedCatalog = {
-        fetchedAt: new Date().toISOString(),
-        source: "Starter deploy catalog",
-        categoryCount: 1,
-        uniqueProductCount: 1,
-        inStock: 1,
-        outOfStock: 0,
-        categories: ["Starter"],
-        subCategories: ["Starter"],
-        categoryTree: { Starter: ["Starter"] },
-        categoryImages: { Starter: "/placeholder.svg" },
-        products: fallbackProducts,
+        ...inStockCatalog,
+        outOfStock: inStockCatalog.outOfStock ?? 0,
+        inStock: inStockCatalog.inStock ?? inStockCatalog.products?.length ?? 0,
       };
+    } catch {
+      try {
+        cachedCatalog = await readJson<Catalog>(path.join(process.cwd(), "data", "fast-catalog.json"));
+      } catch {
+        cachedCatalog = {
+          fetchedAt: new Date().toISOString(),
+          source: "Starter deploy catalog",
+          categoryCount: 1,
+          uniqueProductCount: 1,
+          inStock: 1,
+          outOfStock: 0,
+          categories: ["Starter"],
+          subCategories: ["Starter"],
+          categoryTree: { Starter: ["Starter"] },
+          categoryImages: { Starter: "/placeholder.svg" },
+          products: fallbackProducts,
+        };
+      }
     }
   }
 
