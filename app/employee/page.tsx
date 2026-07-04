@@ -28,6 +28,7 @@ type EmployeeProductsResponse = {
 
 function formatPrice(value: Product["priceJod"]) {
   const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return "Price missing";
   return `JOD ${amount.toFixed(2)}`;
 }
 
@@ -249,7 +250,7 @@ export default function EmployeePage() {
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
-                    <b className="text-emerald-700">{formatPrice(product.priceJod)}</b>
+                    <b className={Number(product.priceJod || 0) > 0 ? "text-emerald-700" : "text-red-600"}>{formatPrice(product.priceJod)}</b>
                     <span className="text-xs text-slate-500">Qty {product.quantity ?? "-"}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
