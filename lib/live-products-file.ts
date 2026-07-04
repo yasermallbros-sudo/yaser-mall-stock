@@ -80,7 +80,11 @@ async function getFastCatalog() {
     const products = data.products.slice(0, 300);
     const categories = Array.from(new Set(data.products.map((product) => product.mainCategory).filter(Boolean))).sort();
     const categoryTree = Object.fromEntries(categories.map((category) => [category, []])) as Record<string, string[]>;
-    const categoryImages = Object.fromEntries(data.products.filter((product) => product.mainCategory && product.imageUrl).map((product) => [product.mainCategory, product.imageUrl])) as Record<string, string>;
+    const categoryImages = Object.fromEntries(
+      data.products
+        .filter((product) => product.mainCategory && product.imageUrl)
+        .map((product) => [product.mainCategory, product.imageUrl])
+    ) as Record<string, string>;
     return { ...data, categories, categoryTree, categoryImages, products };
   }
 }
