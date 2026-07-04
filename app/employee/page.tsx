@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+const PAGE_SIZE = 120;
+const MAX_ITEMS = 5000;
+
 type Product = {
   id: string;
   englishName?: string | null;
@@ -42,16 +45,21 @@ export default function EmployeePage() {
   const [totalFiltered, setTotalFiltered] = useState(0);
   const [lastSync, setLastSync] = useState("");
   const [status, setStatus] = useState("Loading live items...");
+  const [limit, setLimit] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setLimit(PAGE_SIZE);
+  }, [selectedCategory, selectedSubCategory]);
 
   useEffect(() => {
     let active = true;
 
     async function loadProducts() {
       try {
-        setStatus("Loading live items...");
+        setStatus(limit > PAGE_SIZE ? "Loading more items..." : "Loading live items...");
         const params = new URLSearchParams({
           status: "IN_STOCK",
-          limit: "120",
+          limit: String(limit),
         });
         if (selectedCategory) params.set("category", selectedCategory);
         if (selectedSubCategory) params.set("subCategory", selectedSubCategory);
@@ -84,7 +92,20 @@ export default function EmployeePage() {
     return () => {
       active = false;
     };
-  }, [selectedCategory, selectedSubCategory]);
+  }, [selectedCategory, selectedSubCategory, limit]);
+
+  useEffect(() => {
+    function loadMoreOnScroll() {
+      const hasMore = products.length < totalFiltered && products.length < MAX_ITEMS;
+      const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 900;
+      if (!hasMore || !nearBottom || status === "Loading more items..." || status === "Loading live items...") return;
+      setLimit((current) => Math.min(MAX_ITEMS, current + PAGE_SIZE));
+    }
+
+    window.addEventListener("scroll", loadMoreOnScroll, { passive: true });
+    loadMoreOnScroll();
+    return () => window.removeEventListener("scroll", loadMoreOnScroll);
+  }, [products.length, totalFiltered, status]);
 
   async function markProduct(productId: string, action: "IN_STOCK" | "OUT_OF_STOCK") {
     const previous = products;
@@ -283,6 +304,12 @@ export default function EmployeePage() {
             ))
           )}
         </section>
+
+        {products.length > 0 && products.length < totalFiltered ? (
+          <div className="rounded-xl border bg-white p-4 text-center text-sm font-semibold text-slate-600">
+            Scroll down to load more items ({products.length} / {totalFiltered})
+          </div>
+        ) : null}
       </div>
     </main>
   );
