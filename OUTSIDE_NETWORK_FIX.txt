@@ -1,0 +1,7 @@
+OUTSIDE NETWORK FIX
+
+Double-click ONE_CLICK_PUBLIC_APP.bat.
+It now downloads the public-link tool by itself.
+Wait for PUBLIC LINKS READY.
+Send the HTTPS /employee link.
+Do not use 0.0.0.0, localhost, or 192.168 outside Wi-Fi.

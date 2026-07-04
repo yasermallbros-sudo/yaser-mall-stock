@@ -1,21 +1,21 @@
-services:
-  - type: web
-    name: yaser-mall-stock
-    runtime: node
-    plan: starter
-    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run db:seed && npm run build
-    startCommand: npm run start -- -p $PORT
-    autoDeploy: true
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: yaser-mall-stock-db
-          property: connectionString
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_TELEMETRY_DISABLED
-        value: "1"
+# Yaser Mall Stock
 
-databases:
-  - name: yaser-mall-stock-db
-    plan: starter
+Internal inventory audit system for Yaser Mall.
+
+## Setup
+
+1. Copy `.env.example` to `.env` and set PostgreSQL `DATABASE_URL`.
+2. Run `pnpm install`.
+3. Run `pnpm db:migrate`.
+4. Run `pnpm db:seed`.
+5. Start with `pnpm dev`.
+
+Seeded users use password `YaserMall@2026`:
+
+- `admin@yasermall.local`
+- `supervisor@yasermall.local`
+- `employee@yasermall.local`
+
+## Scraper
+
+Run `pnpm scrape`. It starts at `https://yasermallonline.com/en/home`, discovers categories, visits product pages, extracts names, price, image, brand, category, and URL, then upserts products by `productUrl`.

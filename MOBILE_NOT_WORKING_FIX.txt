@@ -1,0 +1,15 @@
+MOBILE NOT WORKING - EASY FIX
+
+1. Close old Yaser app / tunnel windows.
+2. Double-click ONE_CLICK_PUBLIC_APP.bat again.
+3. Wait until it shows PUBLIC LINKS READY.
+4. Send only the HTTPS employee link, not localhost and not 192.168.
+
+Correct example:
+https://something.trycloudflare.com/employee
+
+Wrong outside Wi-Fi:
+http://localhost:3000/employee
+http://192.168.11.70:3000/employee
+
+Keep both windows open while employees use it.

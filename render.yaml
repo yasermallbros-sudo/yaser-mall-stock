@@ -15,7 +15,11 @@ services:
         value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
+      - key: SCRAPER_MAX_PRODUCTS
+        value: "1200"
+      - key: LIVE_SYNC_MAX_PRODUCTS
+        value: "1200"
 
 databases:
   - name: yaser-mall-stock-db
-    plan: basic-256mb
+    plan: starter
