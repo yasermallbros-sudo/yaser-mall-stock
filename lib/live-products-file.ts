@@ -91,13 +91,17 @@ async function readLiveProductFile(file: string) {
 
 async function getCategoryMap() {
   const file = path.join(process.cwd(), "data", "yaser-category-map.json");
-  const fileStat = await stat(file);
-  const mtime = fileStat.mtimeMs;
-  if (cachedCategoryMap && cachedCategoryMapMtime === mtime) return cachedCategoryMap;
-  cachedCategoryMap = JSON.parse(await readFile(file, "utf8")) as CategoryMap;
-  cachedCategoryMapMtime = mtime;
-  cachedIndex = null;
-  return cachedCategoryMap;
+  try {
+    const fileStat = await stat(file);
+    const mtime = fileStat.mtimeMs;
+    if (cachedCategoryMap && cachedCategoryMapMtime === mtime) return cachedCategoryMap;
+    cachedCategoryMap = JSON.parse(await readFile(file, "utf8")) as CategoryMap;
+    cachedCategoryMapMtime = mtime;
+    cachedIndex = null;
+    return cachedCategoryMap;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function getLiveProductData(options: { forceFresh?: boolean } = {}) {
