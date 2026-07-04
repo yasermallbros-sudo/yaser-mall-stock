@@ -13,6 +13,7 @@ type CatalogFile = {
   categories?: string[];
   categoryTree?: Record<string, string[]>;
   categoryImages?: Record<string, string>;
+  productParts?: string[];
   products?: ReadyProduct[];
 };
 
@@ -30,10 +31,53 @@ function liveStock(product: { quantity?: unknown; stock_status?: unknown }) {
 }
 
 async function touchJsonFile(file: string, fetchedAt: string) {
-  const raw = await readFile(file, "utf8");
-  const data = JSON.parse(raw) as CatalogFile;
-  data.fetchedAt = fetchedAt;
+  try {
+    const raw = await readFile(file, "utf8");
+    const data = JSON.parse(raw) as CatalogFile;
+    data.fetchedAt = fetchedAt;
+    await writeFile(file, JSON.stringify(data), "utf8");
+  } catch {
+    // Some deploys do not include every optional catalog file.
+  }
+}
+
+async function readCatalogWithParts(file: string) {
+  const data = JSON.parse(await readFile(file, "utf8")) as CatalogFile;
+  if (!Array.isArray(data.products) && Array.isArray(data.productParts)) {
+    const products: ReadyProduct[] = [];
+    for (const part of data.productParts) {
+      try {
+        const rows = JSON.parse(await readFile(path.join(path.dirname(file), part), "utf8")) as ReadyProduct[];
+        products.push(...rows);
+      } catch {
+        // Keep syncing the parts that are present.
+      }
+    }
+    data.products = products;
+  }
+  return data;
+}
+
+async function writeCatalogWithParts(file: string, data: CatalogFile) {
+  if (Array.isArray(data.productParts) && data.productParts.length > 0 && Array.isArray(data.products)) {
+    const partSize = Math.ceil(data.products.length / data.productParts.length);
+    await Promise.all(data.productParts.map((part, index) => {
+      const rows = data.products!.slice(index * partSize, (index + 1) * partSize);
+      return writeFile(path.join(path.dirname(file), part), JSON.stringify(rows), "utf8");
+    }));
+    const indexData = { ...data };
+    delete indexData.products;
+    await writeFile(file, JSON.stringify(indexData), "utf8");
+    return;
+  }
+
   await writeFile(file, JSON.stringify(data), "utf8");
+}
+
+function catalogWithProducts(data: CatalogFile, products: ReadyProduct[], fetchedAt: string): CatalogFile {
+  const next = { ...data, fetchedAt, products };
+  recomputeCatalogCounts(next);
+  return next;
 }
 
 async function getLiveApiProduct(productId: string) {
@@ -87,19 +131,24 @@ export async function refreshCatalogSyncDate(date = new Date()) {
   const fetchedAt = date.toISOString();
   await Promise.all([
     touchJsonFile(path.join(process.cwd(), "public", "yaser-live-products.txt"), fetchedAt),
+    touchJsonFile(path.join(process.cwd(), "public", "yaser-live-instock-products.json"), fetchedAt),
+    touchJsonFile(path.join(process.cwd(), "public", "yaser-live-instock-products.txt"), fetchedAt),
     touchJsonFile(path.join(process.cwd(), "data", "fast-catalog.json"), fetchedAt)
   ]);
   return fetchedAt;
 }
 
 export async function syncExistingCatalogFromYaser(options: { maxProducts?: number } = {}) {
-  const maxProducts = Math.max(1, options.maxProducts ?? Number(process.env.LIVE_SYNC_MAX_PRODUCTS ?? 1200));
+  const requestedMax = options.maxProducts ?? Number(process.env.LIVE_SYNC_MAX_PRODUCTS ?? 5000);
+  const maxProducts = requestedMax <= 0 ? Number.MAX_SAFE_INTEGER : Math.max(1, requestedMax);
   const fetchedAt = new Date().toISOString();
   const fullFile = path.join(process.cwd(), "public", "yaser-live-products.txt");
   const fastFile = path.join(process.cwd(), "data", "fast-catalog.json");
-  const data = JSON.parse(await readFile(fullFile, "utf8")) as CatalogFile;
+  const data = await readCatalogWithParts(fullFile);
   const products = data.products ?? [];
-  const targets = products.slice(0, maxProducts);
+  const missingPrice = products.filter((product) => cleanPrice(product.priceJod) <= 0);
+  const withPrice = products.filter((product) => cleanPrice(product.priceJod) > 0);
+  const targets = [...missingPrice, ...withPrice].slice(0, maxProducts);
   let updated = 0;
   for (let index = 0; index < targets.length; index += 12) {
     const group = targets.slice(index, index + 12);
@@ -113,17 +162,30 @@ export async function syncExistingCatalogFromYaser(options: { maxProducts?: numb
       updated += 1;
     });
   }
-  data.products = products;
-  data.fetchedAt = fetchedAt;
-  recomputeCatalogCounts(data);
-  await writeFile(fullFile, JSON.stringify(data), "utf8");
+  const updatedFullCatalog = catalogWithProducts(data, products, fetchedAt);
+  await writeCatalogWithParts(fullFile, updatedFullCatalog);
+
+  const inStockProducts = products.filter((product) => product.sourceStock === "IN_STOCK");
+  const inStockCatalog = catalogWithProducts(
+    {
+      ...updatedFullCatalog,
+      source: updatedFullCatalog.source ?? "https://yasermallonline.com/en/home",
+      products: inStockProducts,
+    },
+    inStockProducts,
+    fetchedAt,
+  );
+  await Promise.all([
+    writeFile(path.join(process.cwd(), "public", "yaser-live-instock-products.json"), JSON.stringify(inStockCatalog), "utf8"),
+    writeFile(path.join(process.cwd(), "public", "yaser-live-instock-products.txt"), JSON.stringify(inStockCatalog), "utf8"),
+  ]);
 
   const fast = JSON.parse(await readFile(fastFile, "utf8")) as CatalogFile;
   fast.fetchedAt = fetchedAt;
-  fast.uniqueProductCount = data.uniqueProductCount;
-  fast.inStock = data.inStock;
-  fast.outOfStock = data.outOfStock;
-  fast.categoryCount = data.categoryCount;
+  fast.uniqueProductCount = updatedFullCatalog.uniqueProductCount;
+  fast.inStock = updatedFullCatalog.inStock;
+  fast.outOfStock = updatedFullCatalog.outOfStock;
+  fast.categoryCount = updatedFullCatalog.categoryCount;
   if (fast.products?.length) {
     const byId = new Map(products.map((product) => [String(product.id), product]));
     fast.products = fast.products.map((product) => byId.get(String(product.id)) ?? product);
