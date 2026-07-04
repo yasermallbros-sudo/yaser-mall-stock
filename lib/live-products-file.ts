@@ -68,12 +68,21 @@ const monthlyBestOfferFilters: OfferFilterGroup[] = [
 
 async function getFastCatalog() {
   const file = path.join(process.cwd(), "data", "fast-catalog.json");
-  const fileStat = await stat(file);
-  const mtime = fileStat.mtimeMs;
-  if (cachedFastCatalog && cachedFastCatalogMtime === mtime) return cachedFastCatalog;
-  cachedFastCatalog = JSON.parse(await readFile(file, "utf8")) as FastCatalog;
-  cachedFastCatalogMtime = mtime;
-  return cachedFastCatalog;
+  try {
+    const fileStat = await stat(file);
+    const mtime = fileStat.mtimeMs;
+    if (cachedFastCatalog && cachedFastCatalogMtime === mtime) return cachedFastCatalog;
+    cachedFastCatalog = JSON.parse(await readFile(file, "utf8")) as FastCatalog;
+    cachedFastCatalogMtime = mtime;
+    return cachedFastCatalog;
+  } catch {
+    const data = await getLiveProductData();
+    const products = data.products.slice(0, 300);
+    const categories = Array.from(new Set(data.products.map((product) => product.mainCategory).filter(Boolean))).sort();
+    const categoryTree = Object.fromEntries(categories.map((category) => [category, []])) as Record<string, string[]>;
+    const categoryImages = Object.fromEntries(data.products.filter((product) => product.mainCategory && product.imageUrl).map((product) => [product.mainCategory, product.imageUrl])) as Record<string, string>;
+    return { ...data, categories, categoryTree, categoryImages, products };
+  }
 }
 
 async function readLiveProductFile(file: string) {
