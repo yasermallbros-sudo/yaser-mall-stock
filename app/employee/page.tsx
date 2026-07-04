@@ -46,6 +46,7 @@ export default function EmployeePage() {
   const [lastSync, setLastSync] = useState("");
   const [status, setStatus] = useState("Loading live items...");
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setLimit(PAGE_SIZE);
@@ -139,6 +140,30 @@ export default function EmployeePage() {
     }
   }
 
+  async function syncDataNow() {
+    try {
+      setSyncing(true);
+      setStatus("Syncing data now...");
+      const body = new FormData();
+      body.set("returnTo", "/employee?status=IN_STOCK");
+      body.set("maxProducts", "240");
+      const response = await fetch("/employee/sync-catalog", {
+        method: "POST",
+        body,
+        headers: { accept: "application/json" },
+      });
+      const result = (await response.json().catch(() => ({ ok: false, updated: 0 }))) as { ok?: boolean; updated?: number; fetchedAt?: string };
+      if (!response.ok || !result.ok) throw new Error("Sync failed");
+      setLastSync(result.fetchedAt ? new Date(result.fetchedAt).toLocaleString() : new Date().toLocaleString());
+      setLimit(PAGE_SIZE);
+      setStatus(`Sync complete: ${Number(result.updated ?? 0)} products updated`);
+    } catch {
+      setStatus("Sync failed. Try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const subCategories = selectedCategory ? categoryTree[selectedCategory] ?? [] : [];
 
   return (
@@ -159,13 +184,14 @@ export default function EmployeePage() {
               <h1 className="text-xl font-bold">Live Stock Check</h1>
               <p className="text-sm text-emerald-50">Tap In or Out. Checked items are removed for 30 days.</p>
             </div>
-            <form action="/employee/sync-catalog" method="post">
-              <input type="hidden" name="returnTo" value="/employee?status=IN_STOCK" />
-              <input type="hidden" name="maxProducts" value="5000" />
-              <button type="submit" className="h-11 rounded-lg bg-white px-4 text-sm font-bold text-emerald-800">
-                Sync data now
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={syncDataNow}
+              disabled={syncing}
+              className="h-11 rounded-lg bg-white px-4 text-sm font-bold text-emerald-800 disabled:cursor-wait disabled:opacity-70"
+            >
+              {syncing ? "Syncing..." : "Sync data now"}
+            </button>
           </div>
         </section>
 
