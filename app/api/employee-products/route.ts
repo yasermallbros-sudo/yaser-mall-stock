@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
+import { isHiddenForAudit, readAuditMap } from "@/lib/audit-store";
 
 type Product = {
   id: string;
@@ -50,6 +51,8 @@ const fallbackProducts: Product[] = [
 ];
 
 let cachedCatalog: Catalog | null = null;
+let cachedVisibleKey = "";
+let cachedVisibleData: { categories: string[]; categoryTree: Record<string, string[]>; categoryImages: Record<string, string> } | null = null;
 
 async function readJson<T>(file: string) {
   const text = await readFile(file, "utf8");
@@ -250,10 +253,13 @@ function productMatchesLabel(product: Product, label: string) {
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
   if (categoryImages[category]) return categoryImages[category];
-  return products.find((product) => productCategoryLabels(product).includes(category) && product.imageUrl)?.imageUrl ?? "/placeholder.svg";
+  return "/placeholder.svg";
 }
 
 function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
+  const cacheKey = `${catalog.fetchedAt ?? ""}:${products.length}:${catalog.categories?.length ?? 0}:${Object.keys(catalog.categoryTree ?? {}).length}`;
+  if (cachedVisibleData && cachedVisibleKey === cacheKey) return cachedVisibleData;
+
   const existingTree = catalog.categoryTree ?? {};
   const categorySet = new Set<string>();
   const tree: Record<string, Set<string>> = {};
@@ -298,7 +304,9 @@ function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
     categoryImageFor(categoryImages, products, category),
   ])) as Record<string, string>;
 
-  return { categories, categoryTree, categoryImages: images };
+  cachedVisibleKey = cacheKey;
+  cachedVisibleData = { categories, categoryTree, categoryImages: images };
+  return cachedVisibleData;
 }
 
 export async function GET(request: NextRequest) {
@@ -312,16 +320,23 @@ export async function GET(request: NextRequest) {
 
     const catalog = await readCatalog();
     const products = Array.isArray(catalog.products) && catalog.products.length > 0 ? catalog.products : fallbackProducts;
-    const statusProducts = products.filter((product) => status === "ALL" || (product.sourceStock || "IN_STOCK") === status);
+    const auditRecords = await readAuditMap();
+    const statusProducts = products.filter((product) => {
+      if (isHiddenForAudit(auditRecords[String(product.id)])) return false;
+      return status === "ALL" || (product.sourceStock || "IN_STOCK") === status;
+    });
     const visibleCategories = buildVisibleCategoryData(catalog, statusProducts);
 
-    const filtered = statusProducts.filter((product) => {
-      const labels = productCategoryLabels(product);
-      const searchText = [product.id, product.englishName, product.arabicName, product.brand, ...labels].join(" ").toLowerCase();
-      const matchesCategory = !category || (subCategory ? true : productMatchesLabel(product, category));
-      const matchesSub = !subCategory || productMatchesLabel(product, subCategory);
-      return matchesCategory && matchesSub && (!q || searchText.includes(q));
-    });
+    const hasFilter = Boolean(q || category || subCategory);
+    const filtered = hasFilter
+      ? statusProducts.filter((product) => {
+          const labels = productCategoryLabels(product);
+          const searchText = [product.id, product.englishName, product.arabicName, product.brand, ...labels].join(" ").toLowerCase();
+          const matchesCategory = !category || (subCategory ? true : productMatchesLabel(product, category));
+          const matchesSub = !subCategory || productMatchesLabel(product, subCategory);
+          return matchesCategory && matchesSub && (!q || searchText.includes(q));
+        })
+      : statusProducts;
 
     return NextResponse.json({
       fetchedAt: catalog.fetchedAt ?? new Date().toISOString(),
