@@ -82,7 +82,8 @@ async function readFullLiveCatalog() {
     products.push(...index.products);
   }
 
-  if (products.length === 0) {
+  const source = String(index.source ?? "").toLowerCase();
+  if (products.length === 0 || (products.length <= 1 && source.includes("starter"))) {
     throw new Error("Full live product parts are not available.");
   }
 
