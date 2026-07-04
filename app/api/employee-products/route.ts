@@ -209,6 +209,24 @@ function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
   const tree: Record<string, Set<string>> = {};
   const categoryImages: Record<string, string> = { ...(catalog.categoryImages ?? {}) };
 
+  for (const category of catalog.categories ?? []) {
+    const cleanCategory = clean(category);
+    if (!cleanCategory) continue;
+    categorySet.add(cleanCategory);
+    tree[cleanCategory] ??= new Set<string>();
+  }
+
+  for (const [main, subs] of Object.entries(existingTree)) {
+    const cleanMain = clean(main);
+    if (!cleanMain) continue;
+    categorySet.add(cleanMain);
+    tree[cleanMain] ??= new Set<string>();
+    for (const sub of subs ?? []) {
+      const cleanSub = clean(sub);
+      if (cleanSub) tree[cleanMain].add(cleanSub);
+    }
+  }
+
   for (const product of products) {
     const main = clean(product.mainCategory);
     const sub = clean(product.subCategory);
@@ -217,17 +235,6 @@ function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
       tree[main] ??= new Set<string>();
       if (sub) tree[main].add(sub);
       if (!categoryImages[main] && product.imageUrl) categoryImages[main] = product.imageUrl;
-    }
-  }
-
-  for (const [main, subs] of Object.entries(existingTree)) {
-    const cleanMain = clean(main);
-    if (!cleanMain || !categorySet.has(cleanMain)) continue;
-    for (const sub of subs ?? []) {
-      const cleanSub = clean(sub);
-      if (cleanSub && products.some((product) => clean(product.mainCategory) === cleanMain && productCategoryLabels(product).includes(cleanSub))) {
-        tree[cleanMain]?.add(cleanSub);
-      }
     }
   }
 
