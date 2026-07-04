@@ -52,7 +52,8 @@ const fallbackProducts: Product[] = [
 let cachedCatalog: Catalog | null = null;
 
 async function readJson<T>(file: string) {
-  return JSON.parse(await readFile(file, "utf8")) as T;
+  const text = await readFile(file, "utf8");
+  return JSON.parse(text.replace(/^\uFEFF/, "").trim()) as T;
 }
 
 async function readOptionalCatalog(file: string) {
