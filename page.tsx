@@ -1,6 +1,4 @@
 import { EmployeeReadyApp } from "@/components/products/employee-ready-app";
-import { readAuditMap } from "@/lib/audit-store";
-import { getLiveProductsPage, type LiveProductsPage } from "@/lib/live-products-file";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,7 +22,7 @@ function normalizeCategory(value: string) {
   return value;
 }
 
-function starterEmployeePage(): LiveProductsPage {
+function starterEmployeePage() {
   return {
     fetchedAt: "2026-07-04T00:00:00.000Z",
     source: "Starter deploy catalog",
@@ -47,7 +45,7 @@ function starterEmployeePage(): LiveProductsPage {
         brand: "Yaser Mall",
         mainCategory: "Starter",
         subCategory: "Starter",
-        sourceStock: "IN_STOCK",
+        sourceStock: "IN_STOCK" as const,
         productUrl: "https://yasermallonline.com/en/home",
         allCategories: ["Starter"]
       }
@@ -62,15 +60,5 @@ export default async function EmployeePage({ searchParams }: PageProps) {
   const subCategory = first(params?.subCategory) ?? "";
   const status = stockFilter(first(params?.status));
   const limit = Number(first(params?.limit) ?? 60);
-  const [initialData, auditRecords] = await Promise.all([
-    getLiveProductsPage({ q: query, category, subCategory, status, limit, forceFresh: Boolean(category || subCategory) }).catch((error) => {
-      console.error("Employee live products failed", error);
-      return starterEmployeePage();
-    }),
-    readAuditMap().catch((error) => {
-      console.error("Employee audit map failed", error);
-      return {};
-    })
-  ]);
-  return <EmployeeReadyApp initialData={initialData} auditRecords={auditRecords} initialQuery={query} initialCategory={category} initialSubCategory={subCategory} initialStatus={status} currentLimit={limit} refreshedAt={new Date().toISOString()} />;
+  return <EmployeeReadyApp initialData={starterEmployeePage()} auditRecords={{}} initialQuery={query} initialCategory={category} initialSubCategory={subCategory} initialStatus={status} currentLimit={limit} refreshedAt="2026-07-04T00:00:00.000Z" />;
 }
