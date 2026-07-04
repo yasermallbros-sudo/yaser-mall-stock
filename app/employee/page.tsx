@@ -7,10 +7,14 @@ type Product = {
   englishName?: string | null;
   arabicName?: string | null;
   imageUrl?: string | null;
+  brand?: string | null;
   mainCategory?: string | null;
   subCategory?: string | null;
+  productUrl?: string | null;
+  sourceStock?: "IN_STOCK" | "OUT_OF_STOCK" | string | null;
   priceJod?: number | string | null;
   quantity?: number | string | null;
+  allCategories?: string[];
 };
 
 type EmployeeProductsResponse = {
@@ -83,12 +87,15 @@ export default function EmployeePage() {
 
   async function markProduct(productId: string, action: "IN_STOCK" | "OUT_OF_STOCK") {
     const previous = products;
+    const product = products.find((item) => item.id === productId);
     setProducts((items) => items.filter((item) => item.id !== productId));
+    setStatus(action === "IN_STOCK" ? "Saving in stock..." : "Saving out of stock...");
 
     try {
       const body = new FormData();
       body.set("productId", productId);
       body.set("status", action);
+      if (product) body.set("product", JSON.stringify(product));
 
       const response = await fetch("/employee/check", {
         method: "POST",
@@ -98,10 +105,12 @@ export default function EmployeePage() {
           "x-requested-with": "employee-live-check",
         },
       });
+      const result = (await response.json().catch(() => ({ ok: false }))) as { ok?: boolean };
 
-      if (!response.ok) {
+      if (!response.ok || !result.ok) {
         throw new Error("Save failed");
       }
+      setStatus(action === "IN_STOCK" ? "Saved in stock" : "Saved out of stock");
     } catch {
       setProducts(previous);
       setStatus("Could not save. Try again.");
