@@ -316,7 +316,7 @@ export async function GET(request: NextRequest) {
     const category = clean(params.get("category"));
     const subCategory = clean(params.get("subCategory"));
     const status = normalizeStock(params.get("status"));
-    const limit = Math.min(500, Math.max(1, Number(params.get("limit") ?? 120) || 120));
+    const limit = Math.min(5000, Math.max(1, Number(params.get("limit") ?? 120) || 120));
 
     const catalog = await readCatalog();
     const products = Array.isArray(catalog.products) && catalog.products.length > 0 ? catalog.products : fallbackProducts;
