@@ -5,7 +5,9 @@ import { syncExistingCatalogFromYaser } from "@/lib/catalog-sync";
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const returnTo = String(formData.get("returnTo") || "/employee");
-  await syncExistingCatalogFromYaser({ maxProducts: Number(process.env.LIVE_SYNC_MAX_PRODUCTS ?? 1200) });
+  const requestedMax = String(formData.get("maxProducts") || "");
+  const maxProducts = Math.max(1, Number(requestedMax || process.env.LIVE_SYNC_MAX_PRODUCTS || 5000));
+  await syncExistingCatalogFromYaser({ maxProducts });
   revalidatePath("/employee");
   revalidatePath("/admin/items");
   revalidatePath("/dashboard");
