@@ -152,8 +152,13 @@ async function readCatalog() {
   } catch {
     try {
       const inStockCatalog = await readBestFallbackCatalog();
+      const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
+      const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
       cachedCatalog = {
         ...inStockCatalog,
+        categories: map?.categories ?? fast?.categories ?? inStockCatalog.categories ?? [],
+        categoryTree: map?.categoryTree ?? fast?.categoryTree ?? inStockCatalog.categoryTree ?? {},
+        categoryImages: map?.categoryImages ?? fast?.categoryImages ?? inStockCatalog.categoryImages ?? {},
         outOfStock: inStockCatalog.outOfStock ?? 0,
         inStock: inStockCatalog.inStock ?? inStockCatalog.products?.length ?? 0,
       };
@@ -196,6 +201,31 @@ function clean(value: unknown) {
 
 function productCategoryLabels(product: Product) {
   return [product.mainCategory, product.subCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean);
+}
+
+function comparableLabel(value: string) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/\bال/g, "")
+    .replace(/&/g, "و")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function labelMatches(left: string, right: string) {
+  const a = comparableLabel(left);
+  const b = comparableLabel(right);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const shorter = a.length < b.length ? a : b;
+  const longer = a.length < b.length ? b : a;
+  return shorter.length >= 5 && longer.includes(shorter);
+}
+
+function productMatchesLabel(product: Product, label: string) {
+  return productCategoryLabels(product).some((productLabel) => labelMatches(productLabel, label));
 }
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
@@ -264,18 +294,13 @@ export async function GET(request: NextRequest) {
     const products = Array.isArray(catalog.products) && catalog.products.length > 0 ? catalog.products : fallbackProducts;
     const statusProducts = products.filter((product) => status === "ALL" || (product.sourceStock || "IN_STOCK") === status);
     const visibleCategories = buildVisibleCategoryData(catalog, statusProducts);
-    const officialSubs = category ? new Set(visibleCategories.categoryTree[category] ?? []) : new Set<string>();
 
     const filtered = statusProducts.filter((product) => {
-      const productStatus = product.sourceStock || "IN_STOCK";
       const labels = productCategoryLabels(product);
       const searchText = [product.id, product.englishName, product.arabicName, product.brand, ...labels].join(" ").toLowerCase();
-      const productMain = clean(product.mainCategory);
-      const productSub = clean(product.subCategory);
-      const matchesCategory = !category || productMain === category || labels.includes(category);
-      const matchesSub = !subCategory || productSub === subCategory || labels.includes(subCategory);
-      const belongsToSelectedMain = !category || !subCategory || officialSubs.size === 0 || officialSubs.has(subCategory);
-      return matchesCategory && matchesSub && belongsToSelectedMain && (!q || searchText.includes(q));
+      const matchesCategory = !category || (subCategory ? true : productMatchesLabel(product, category));
+      const matchesSub = !subCategory || productMatchesLabel(product, subCategory);
+      return matchesCategory && matchesSub && (!q || searchText.includes(q));
     });
 
     return NextResponse.json({
