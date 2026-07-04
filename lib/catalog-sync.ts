@@ -17,6 +17,10 @@ type CatalogFile = {
   products?: ReadyProduct[];
 };
 
+function parseJson<T>(text: string) {
+  return JSON.parse(text.replace(/^\uFEFF/, "").trim()) as T;
+}
+
 function cleanPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return Number(value.toFixed(2));
   if (typeof value !== "string") return 0;
@@ -33,7 +37,7 @@ function liveStock(product: { quantity?: unknown; stock_status?: unknown }) {
 async function touchJsonFile(file: string, fetchedAt: string) {
   try {
     const raw = await readFile(file, "utf8");
-    const data = JSON.parse(raw) as CatalogFile;
+    const data = parseJson<CatalogFile>(raw);
     data.fetchedAt = fetchedAt;
     await writeFile(file, JSON.stringify(data), "utf8");
   } catch {
@@ -42,12 +46,12 @@ async function touchJsonFile(file: string, fetchedAt: string) {
 }
 
 async function readCatalogWithParts(file: string) {
-  const data = JSON.parse(await readFile(file, "utf8")) as CatalogFile;
+  const data = parseJson<CatalogFile>(await readFile(file, "utf8"));
   if (!Array.isArray(data.products) && Array.isArray(data.productParts)) {
     const products: ReadyProduct[] = [];
     for (const part of data.productParts) {
       try {
-        const rows = JSON.parse(await readFile(path.join(path.dirname(file), part), "utf8")) as ReadyProduct[];
+        const rows = parseJson<ReadyProduct[]>(await readFile(path.join(path.dirname(file), part), "utf8"));
         products.push(...rows);
       } catch {
         // Keep syncing the parts that are present.
@@ -180,7 +184,7 @@ export async function syncExistingCatalogFromYaser(options: { maxProducts?: numb
     writeFile(path.join(process.cwd(), "public", "yaser-live-instock-products.txt"), JSON.stringify(inStockCatalog), "utf8"),
   ]);
 
-  const fast = JSON.parse(await readFile(fastFile, "utf8")) as CatalogFile;
+  const fast = parseJson<CatalogFile>(await readFile(fastFile, "utf8"));
   fast.fetchedAt = fetchedAt;
   fast.uniqueProductCount = updatedFullCatalog.uniqueProductCount;
   fast.inStock = updatedFullCatalog.inStock;
