@@ -25,7 +25,19 @@ export function hideUntilFrom(date: Date) {
 
 export async function readAuditMap(): Promise<AuditMap> {
   try {
-    return JSON.parse(await readFile(auditFile(), "utf8")) as AuditMap;
+    const records = JSON.parse(await readFile(auditFile(), "utf8")) as AuditMap;
+    const now = Date.now();
+    let changed = false;
+
+    for (const [productId, record] of Object.entries(records)) {
+      if (new Date(record.hideUntil).getTime() <= now) {
+        delete records[productId];
+        changed = true;
+      }
+    }
+
+    if (changed) await writeAuditMap(records);
+    return records;
   } catch {
     return {};
   }
