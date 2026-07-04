@@ -50,7 +50,6 @@ const fallbackProducts: Product[] = [
 ];
 
 let cachedCatalog: Catalog | null = null;
-const livePriceCache = new Map<string, number>();
 
 async function readJson<T>(file: string) {
   const text = await readFile(file, "utf8");
@@ -196,61 +195,6 @@ function normalizeStock(value: string | null) {
   return "ALL";
 }
 
-function cleanPrice(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Number(value.toFixed(2));
-  if (typeof value !== "string") return 0;
-  const parsed = Number(value.replace(/[^\d.]/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : 0;
-}
-
-async function getLiveApiPrice(productId: string) {
-  if (livePriceCache.has(productId)) return livePriceCache.get(productId) ?? 0;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1800);
-
-  try {
-    const url = `https://api.yasermallonline.com/index.php?route=api/wkrestapi/catalog/getProduct&product_id=${encodeURIComponent(productId)}&width=400`;
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        accept: "application/json, text/plain, */*",
-        origin: "https://yasermallonline.com",
-        referer: "https://yasermallonline.com/",
-      },
-    });
-    if (!response.ok) return 0;
-    const product = await response.json() as { special?: unknown; formatted_special?: unknown; price?: unknown; formatted_price?: unknown };
-    const price = cleanPrice(product.special) || cleanPrice(product.formatted_special) || cleanPrice(product.price) || cleanPrice(product.formatted_price);
-    if (price > 0) livePriceCache.set(productId, price);
-    return price;
-  } catch {
-    return 0;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function hydrateMissingPrices(products: Product[]) {
-  const targets = products.filter((product) => cleanPrice(product.priceJod) <= 0).slice(0, 30);
-  if (targets.length === 0) return products;
-
-  const priceById = new Map<string, number>();
-  for (let index = 0; index < targets.length; index += 10) {
-    const group = targets.slice(index, index + 10);
-    const prices = await Promise.all(group.map((product) => getLiveApiPrice(String(product.id))));
-    group.forEach((product, groupIndex) => {
-      if (prices[groupIndex] > 0) priceById.set(String(product.id), prices[groupIndex]);
-    });
-  }
-
-  if (priceById.size === 0) return products;
-  return products.map((product) => {
-    const price = priceById.get(String(product.id));
-    return price ? { ...product, priceJod: price } : product;
-  });
-}
-
 function clean(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
@@ -379,8 +323,6 @@ export async function GET(request: NextRequest) {
       return matchesCategory && matchesSub && (!q || searchText.includes(q));
     });
 
-    const pageProducts = await hydrateMissingPrices(filtered.slice(0, limit));
-
     return NextResponse.json({
       fetchedAt: catalog.fetchedAt ?? new Date().toISOString(),
       source: catalog.source ?? "Yaser Mall online",
@@ -391,7 +333,7 @@ export async function GET(request: NextRequest) {
       ...visibleCategories,
       subCategories: category ? visibleCategories.categoryTree[category] ?? [] : [],
       totalFiltered: filtered.length,
-      products: pageProducts,
+      products: filtered.slice(0, limit),
     });
   } catch {
     return NextResponse.json({
