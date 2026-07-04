@@ -209,9 +209,23 @@ function comparableLabel(value: string) {
     .replace(/[أإآ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/\bال/g, "")
+    .replace(/(^|[\s/&-])ال/g, "$1")
+    .replace(/وال/g, "و")
     .replace(/&/g, "و")
     .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function labelTokens(value: string) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/&/g, " و ")
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((token) => token.replace(/^وال/, "").replace(/^ال/, "").replace(/^و/, ""))
+    .map((token) => token.replace(/(ات|يه|ية|ه|ة)$/u, ""))
+    .filter((token) => token.length >= 4);
 }
 
 function labelMatches(left: string, right: string) {
@@ -221,7 +235,13 @@ function labelMatches(left: string, right: string) {
   if (a === b) return true;
   const shorter = a.length < b.length ? a : b;
   const longer = a.length < b.length ? b : a;
-  return shorter.length >= 5 && longer.includes(shorter);
+  if (shorter.length >= 5 && longer.includes(shorter)) return true;
+
+  const leftTokens = labelTokens(left);
+  const rightTokens = labelTokens(right);
+  return leftTokens.some((leftToken) =>
+    rightTokens.some((rightToken) => leftToken === rightToken || leftToken.includes(rightToken) || rightToken.includes(leftToken)),
+  );
 }
 
 function productMatchesLabel(product: Product, label: string) {
