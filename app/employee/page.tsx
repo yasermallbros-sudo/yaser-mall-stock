@@ -13,6 +13,15 @@ type Product = {
   quantity?: number | string | null;
 };
 
+type EmployeeProductsResponse = {
+  fetchedAt?: string;
+  categories?: string[];
+  categoryTree?: Record<string, string[]>;
+  categoryImages?: Record<string, string>;
+  totalFiltered?: number;
+  products?: Product[];
+};
+
 function formatPrice(value: Product["priceJod"]) {
   const amount = Number(value || 0);
   return `JOD ${amount.toFixed(2)}`;
@@ -20,6 +29,13 @@ function formatPrice(value: Product["priceJod"]) {
 
 export default function EmployeePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoryTree, setCategoryTree] = useState<Record<string, string[]>>({});
+  const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [totalFiltered, setTotalFiltered] = useState(0);
+  const [lastSync, setLastSync] = useState("");
   const [status, setStatus] = useState("Loading live items...");
 
   useEffect(() => {
@@ -28,7 +44,14 @@ export default function EmployeePage() {
     async function loadProducts() {
       try {
         setStatus("Loading live items...");
-        const response = await fetch("/api/employee-products?status=IN_STOCK&limit=60", {
+        const params = new URLSearchParams({
+          status: "IN_STOCK",
+          limit: "120",
+        });
+        if (selectedCategory) params.set("category", selectedCategory);
+        if (selectedSubCategory) params.set("subCategory", selectedSubCategory);
+
+        const response = await fetch(`/api/employee-products?${params.toString()}`, {
           headers: { accept: "application/json" },
         });
 
@@ -36,9 +59,14 @@ export default function EmployeePage() {
           throw new Error("Could not load products");
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as EmployeeProductsResponse;
         if (!active) return;
         setProducts(Array.isArray(data.products) ? data.products : []);
+        setCategories(Array.isArray(data.categories) ? data.categories : []);
+        setCategoryTree(data.categoryTree ?? {});
+        setCategoryImages(data.categoryImages ?? {});
+        setTotalFiltered(Number(data.totalFiltered ?? data.products?.length ?? 0));
+        setLastSync(data.fetchedAt ? new Date(data.fetchedAt).toLocaleString() : "");
         setStatus("Ready");
       } catch {
         if (!active) return;
@@ -51,7 +79,7 @@ export default function EmployeePage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [selectedCategory, selectedSubCategory]);
 
   async function markProduct(productId: string, action: "IN_STOCK" | "OUT_OF_STOCK") {
     const previous = products;
@@ -80,6 +108,8 @@ export default function EmployeePage() {
     }
   }
 
+  const subCategories = selectedCategory ? categoryTree[selectedCategory] ?? [] : [];
+
   return (
     <main className="min-h-screen bg-slate-50 pb-20">
       <header className="sticky top-0 z-10 border-b bg-white">
@@ -100,12 +130,81 @@ export default function EmployeePage() {
         <section className="grid grid-cols-2 gap-2">
           <div className="rounded-xl border bg-white p-3">
             <p className="text-xs text-slate-500">Loaded items</p>
-            <p className="text-xl font-bold">{products.length}</p>
+            <p className="text-xl font-bold">{products.length} / {totalFiltered}</p>
           </div>
           <div className="rounded-xl border bg-white p-3">
             <p className="text-xs text-slate-500">Status</p>
             <p className="text-sm font-semibold">{status}</p>
+            {lastSync ? <p className="mt-1 text-[11px] text-slate-500">{lastSync}</p> : null}
           </div>
+        </section>
+
+        <section className="space-y-3 rounded-xl border bg-white p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold text-slate-900">Main categories</h2>
+            {selectedCategory ? (
+              <button
+                className="rounded-lg border px-3 py-2 text-xs font-semibold text-emerald-700"
+                onClick={() => {
+                  setSelectedCategory("");
+                  setSelectedSubCategory("");
+                }}
+              >
+                All categories
+              </button>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
+            {categories.map((category) => (
+              <button
+                key={category}
+                className={`min-h-28 rounded-xl border bg-white p-2 text-xs font-semibold shadow-sm ${
+                  selectedCategory === category ? "border-emerald-700 ring-1 ring-emerald-700" : "border-slate-200"
+                }`}
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setSelectedSubCategory("");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <img
+                  src={categoryImages[category] || "/placeholder.svg"}
+                  alt=""
+                  className="mx-auto mb-2 h-16 w-full object-contain"
+                  loading="lazy"
+                />
+                <span className="line-clamp-2">{category}</span>
+              </button>
+            ))}
+          </div>
+
+          {selectedCategory ? (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-slate-600">Subcategories</h3>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button
+                  className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold ${
+                    !selectedSubCategory ? "border-emerald-700 bg-emerald-700 text-white" : "bg-white text-slate-700"
+                  }`}
+                  onClick={() => setSelectedSubCategory("")}
+                >
+                  All
+                </button>
+                {subCategories.map((subCategory) => (
+                  <button
+                    key={subCategory}
+                    className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold ${
+                      selectedSubCategory === subCategory ? "border-emerald-700 bg-emerald-700 text-white" : "bg-white text-slate-700"
+                    }`}
+                    onClick={() => setSelectedSubCategory(subCategory)}
+                  >
+                    {subCategory}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
