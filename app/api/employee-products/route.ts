@@ -144,20 +144,9 @@ function categoryImageFor(categoryImages: Record<string, string>, products: Prod
 
 function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
   const existingTree = catalog.categoryTree ?? {};
-  const categorySet = new Set<string>(catalog.categories ?? []);
+  const categorySet = new Set<string>();
   const tree: Record<string, Set<string>> = {};
   const categoryImages: Record<string, string> = { ...(catalog.categoryImages ?? {}) };
-
-  for (const [main, subs] of Object.entries(existingTree)) {
-    const cleanMain = clean(main);
-    if (!cleanMain) continue;
-    categorySet.add(cleanMain);
-    tree[cleanMain] ??= new Set<string>();
-    for (const sub of subs ?? []) {
-      const cleanSub = clean(sub);
-      if (cleanSub) tree[cleanMain].add(cleanSub);
-    }
-  }
 
   for (const product of products) {
     const main = clean(product.mainCategory);
@@ -167,6 +156,17 @@ function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
       tree[main] ??= new Set<string>();
       if (sub) tree[main].add(sub);
       if (!categoryImages[main] && product.imageUrl) categoryImages[main] = product.imageUrl;
+    }
+  }
+
+  for (const [main, subs] of Object.entries(existingTree)) {
+    const cleanMain = clean(main);
+    if (!cleanMain || !categorySet.has(cleanMain)) continue;
+    for (const sub of subs ?? []) {
+      const cleanSub = clean(sub);
+      if (cleanSub && products.some((product) => clean(product.mainCategory) === cleanMain && productCategoryLabels(product).includes(cleanSub))) {
+        tree[cleanMain]?.add(cleanSub);
+      }
     }
   }
 
@@ -194,20 +194,20 @@ export async function GET(request: NextRequest) {
 
     const catalog = await readCatalog();
     const products = Array.isArray(catalog.products) && catalog.products.length > 0 ? catalog.products : fallbackProducts;
-    const visibleCategories = buildVisibleCategoryData(catalog, products);
+    const statusProducts = products.filter((product) => status === "ALL" || (product.sourceStock || "IN_STOCK") === status);
+    const visibleCategories = buildVisibleCategoryData(catalog, statusProducts);
     const officialSubs = category ? new Set(visibleCategories.categoryTree[category] ?? []) : new Set<string>();
 
-    const filtered = products.filter((product) => {
+    const filtered = statusProducts.filter((product) => {
       const productStatus = product.sourceStock || "IN_STOCK";
       const labels = productCategoryLabels(product);
       const searchText = [product.id, product.englishName, product.arabicName, product.brand, ...labels].join(" ").toLowerCase();
       const productMain = clean(product.mainCategory);
       const productSub = clean(product.subCategory);
-      const matchesStatus = status === "ALL" || productStatus === status;
       const matchesCategory = !category || productMain === category || labels.includes(category);
       const matchesSub = !subCategory || productSub === subCategory || labels.includes(subCategory);
       const belongsToSelectedMain = !category || !subCategory || officialSubs.size === 0 || officialSubs.has(subCategory);
-      return matchesStatus && matchesCategory && matchesSub && belongsToSelectedMain && (!q || searchText.includes(q));
+      return matchesCategory && matchesSub && belongsToSelectedMain && (!q || searchText.includes(q));
     });
 
     return NextResponse.json({
