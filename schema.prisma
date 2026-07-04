@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  EMPLOYEE
+}
+
+enum AuditStatus {
+  IN_STOCK
+  OUT_OF_STOCK
+  LOW_STOCK
+  WRONG_IMAGE
+  WRONG_NAME
+  WRONG_PRICE
+  WRONG_CATEGORY
+  DUPLICATE_PRODUCT
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(EMPLOYEE)
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  auditReports AuditReport[]
+
+  @@index([role])
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  englishName  String
+  arabicName   String?
+  price        Decimal       @db.Decimal(12, 2)
+  imageUrl     String?
+  brand        String?
+  category     String?
+  mainCategory String?
+  subCategory  String?
+  productUrl   String        @unique
+  sku          String?       @unique
+  sourceHash   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  auditReports AuditReport[]
+
+  @@index([category])
+  @@index([mainCategory])
+  @@index([subCategory])
+  @@index([brand])
+  @@index([updatedAt])
+}
+
+model AuditReport {
+  id        String       @id @default(cuid())
+  productId String
+  userId    String
+  status    AuditStatus
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos    AuditPhoto[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model AuditPhoto {
+  id            String      @id @default(cuid())
+  auditReportId String
+  url           String
+  fileName      String
+  contentType   String
+  createdAt     DateTime    @default(now())
+  auditReport   AuditReport @relation(fields: [auditReportId], references: [id], onDelete: Cascade)
+}
