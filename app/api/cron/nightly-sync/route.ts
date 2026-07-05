@@ -17,7 +17,8 @@ async function runNightlySync(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const maxProducts = Math.max(1, Number(process.env.LIVE_SYNC_MAX_PRODUCTS || 1200));
+  const rawMaxProducts = Number(process.env.LIVE_SYNC_MAX_PRODUCTS || 0);
+  const maxProducts = rawMaxProducts <= 0 ? 0 : Math.max(1, rawMaxProducts);
   const result = await syncExistingCatalogFromYaser({ maxProducts });
   const mode = await shouldRunFullCatalogRefresh() ? "full" : "newOnly";
   const database = await syncCatalogToDatabase({ mode });
