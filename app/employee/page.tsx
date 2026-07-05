@@ -148,7 +148,7 @@ export default function EmployeePage() {
       setStatus("Syncing data now...");
       const body = new FormData();
       body.set("returnTo", "/employee?status=IN_STOCK");
-      body.set("maxProducts", "240");
+      body.set("maxProducts", "0");
       const response = await fetch("/employee/sync-catalog", {
         method: "POST",
         body,
