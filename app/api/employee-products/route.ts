@@ -347,13 +347,34 @@ async function readCategoryMetadata() {
   ]);
   const categorySet = new Set<string>((map?.categories ?? fast?.categories ?? []).map(clean).filter(Boolean));
   const categoryTree: Record<string, Set<string>> = {};
-  for (const item of Object.values(productFilterMap)) {
-    const main = clean(item?.[0]);
-    const sub = clean(item?.[1]);
+  const officialTree = Object.fromEntries(
+    Object.entries(map?.categoryTree ?? fast?.categoryTree ?? {}).map(([main, subs]) => [
+      clean(main),
+      (subs ?? []).map(clean).filter(Boolean),
+    ]),
+  ) as Record<string, string[]>;
+
+  for (const [main, subs] of Object.entries(officialTree)) {
     if (!main) continue;
     categorySet.add(main);
     categoryTree[main] ??= new Set<string>();
-    if (sub && !exactLabelMatches(sub, main)) categoryTree[main].add(sub);
+    for (const sub of subs) {
+      if (sub && !exactLabelMatches(sub, main)) categoryTree[main].add(sub);
+    }
+  }
+
+  for (const item of Object.values(productFilterMap)) {
+    const main = clean(item?.[0]);
+    const labels = Array.from(new Set([clean(item?.[1]), ...asStringArray(item?.[2])])).filter(Boolean);
+    if (!main) continue;
+    categorySet.add(main);
+    categoryTree[main] ??= new Set<string>();
+    const officialSubs = officialTree[main] ?? [];
+    for (const label of labels) {
+      if (exactLabelMatches(label, main)) continue;
+      if (officialSubs.length > 0 && !officialSubs.some((sub) => exactLabelMatches(sub, label))) continue;
+      categoryTree[main].add(label);
+    }
   }
   const categories = Array.from(categorySet).sort();
   return {
@@ -383,9 +404,9 @@ function filterMapProductIds(productFilterMap: ProductFilterMap, category: strin
   const ids: string[] = [];
   for (const [productId, item] of Object.entries(productFilterMap)) {
     const main = clean(item?.[0]);
-    const sub = clean(item?.[1]);
+    const labels = Array.from(new Set([clean(item?.[1]), ...asStringArray(item?.[2])])).filter(Boolean);
     if (category && !exactLabelMatches(main, category)) continue;
-    if (subCategory && !exactLabelMatches(sub, subCategory)) continue;
+    if (subCategory && !labels.some((label) => exactLabelMatches(label, subCategory))) continue;
     ids.push(productId);
   }
   return ids;
