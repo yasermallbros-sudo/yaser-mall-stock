@@ -131,6 +131,19 @@ async function readLiveProductFile(file: string) {
     const compressedData = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as LiveProductData;
     if (Array.isArray(compressedData.products) && compressedData.products.length > 100) return compressedData;
   } catch {
+    // Fall back to GitHub raw, then the public catalog file.
+  }
+
+  try {
+    const response = await fetch("https://raw.githubusercontent.com/yasermallbros-sudo/yaser-mall-stock/main/data/yaser-live-products.full.json.gz.b64", {
+      cache: "no-store"
+    });
+    if (response.ok) {
+      const compressed = (await response.text()).trim();
+      const compressedData = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as LiveProductData;
+      if (Array.isArray(compressedData.products) && compressedData.products.length > 100) return compressedData;
+    }
+  } catch {
     // Fall back to the public catalog file.
   }
 
