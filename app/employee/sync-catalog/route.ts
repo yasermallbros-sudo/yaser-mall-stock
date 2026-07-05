@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { syncExistingCatalogFromYaser } from "@/lib/catalog-sync";
-import { shouldRunFullCatalogRefresh, syncCatalogToDatabase } from "@/lib/catalog-db";
+import { syncCatalogToDatabase } from "@/lib/catalog-db";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const rawMaxProducts = Number(requestedMax || process.env.LIVE_SYNC_MAX_PRODUCTS || 0);
   const maxProducts = rawMaxProducts <= 0 ? 0 : Math.max(1, rawMaxProducts);
   const result = await syncExistingCatalogFromYaser({ maxProducts });
-  const mode = await shouldRunFullCatalogRefresh() ? "full" : "newOnly";
+  const mode = "full";
   const database = await syncCatalogToDatabase({ mode });
   revalidatePath("/employee");
   revalidatePath("/admin/items");
