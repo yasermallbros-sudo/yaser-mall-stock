@@ -390,6 +390,7 @@
   <script>
     const PAGE_SIZE = 36;
     const REVIEW_KEY = "yaser-stock-reviews-v1";
+    const DATA_VERSION = "2026-07-05-arabic-names";
     const state = {
       products: [],
       role: "admin",
@@ -577,7 +578,7 @@
     el("resetReviews").addEventListener("click", () => { state.reviews = {}; saveReviews(); render(); });
     el("exportCsv").addEventListener("click", () => exportCsv(filteredProducts()));
 
-    fetch("products.json")
+    fetch(`products.json?v=${encodeURIComponent(DATA_VERSION)}`)
       .then((response) => response.json())
       .then((products) => {
         state.products = products;
