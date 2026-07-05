@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yaser Mall Stock Portal</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --text: #17202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --panel: #ffffff;
+      --soft: #eef3f8;
+      --blue: #1f6feb;
+      --green: #16803c;
+      --red: #b42318;
+      --amber: #b26a00;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button {
+      min-height: 38px;
+      border: 0;
+      border-radius: 6px;
+      padding: 0 14px;
+      background: var(--blue);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .topbar, .controls, .data, .pager {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 7px;
+      background: #17202a;
+      color: #fff;
+      font-weight: 800;
+    }
+    .brand p, .section-head p {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .brand h1, .section-head h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
+    .role-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 220px;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--soft);
+    }
+    .role-switch button {
+      min-height: 34px;
+      background: transparent;
+      color: var(--muted);
+    }
+    .role-switch button.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 1px 4px rgb(0 0 0 / .12);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .metric {
+      min-height: 84px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 26px;
+    }
+    .green strong { color: var(--green); }
+    .red strong { color: var(--red); }
+    .amber strong { color: var(--amber); }
+    .blue strong { color: var(--blue); }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(260px, 2fr) repeat(4, minmax(130px, 1fr));
+      gap: 12px;
+      align-items: end;
+      padding: 14px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    input, select {
+      width: 100%;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      padding: 0 10px;
+    }
+
+    .data { overflow: hidden; }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+    .secondary, .clear {
+      background: var(--soft);
+      color: var(--text);
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      min-width: 1120px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    td {
+      color: #273444;
+      font-size: 13px;
+    }
+    td strong {
+      display: block;
+      max-width: 360px;
+      font-size: 14px;
+    }
+    .product-id {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status {
+      display: inline-flex;
+      justify-content: center;
+      min-width: 74px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status.enabled { background: #e8f6ee; color: var(--green); }
+    .status.disabled { background: #fdecec; color: var(--red); }
+
+    .review-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(70px, 1fr));
+      gap: 8px;
+      max-width: 300px;
+    }
+    .review-actions.compact { grid-template-columns: repeat(3, 62px); }
+    .review-actions button {
+      min-height: 34px;
+      padding: 0 10px;
+    }
+    .yes { background: #e8f6ee; color: var(--green); }
+    .no { background: #fdecec; color: var(--red); }
+    .yes.active { background: var(--green); color: #fff; }
+    .no.active { background: var(--red); color: #fff; }
+
+    .employee-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+    .employee-item {
+      display: grid;
+      grid-template-columns: minmax(260px, 2fr) minmax(360px, 2fr) minmax(250px, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .product-main h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+    .product-main p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .facts span:not(.status) {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #344054;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+    }
+    .pager span {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    @media (max-width: 1120px) {
+      .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .search { grid-column: span 2; }
+      .employee-item { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .shell { padding: 10px; }
+      .topbar, .section-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .role-switch { width: 100%; }
+      .metrics, .controls { grid-template-columns: 1fr; }
+      .search { grid-column: auto; }
+      .actions, .review-actions {
+        width: 100%;
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark">YM</span>
+        <div>
+          <p>Yaser Mall Stock</p>
+          <h1>New Products Portal</h1>
+        </div>
+      </div>
+      <div class="role-switch" aria-label="Portal role">
+        <button id="adminRole" class="active" type="button">Admin</button>
+        <button id="employeeRole" type="button">Employee</button>
+      </div>
+    </header>
+
+    <section class="metrics" aria-label="Product totals">
+      <article class="metric"><span>Products</span><strong id="totalCount">0</strong></article>
+      <article class="metric green"><span>Enabled</span><strong id="enabledCount">0</strong></article>
+      <article class="metric red"><span>Disabled</span><strong id="disabledCount">0</strong></article>
+      <article class="metric amber"><span>Zero stock</span><strong id="zeroCount">0</strong></article>
+      <article class="metric blue"><span>Reviewed</span><strong id="reviewedCount">0</strong></article>
+      <article class="metric"><span>Pending</span><strong id="pendingCount">0</strong></article>
+    </section>
+
+    <section class="controls" aria-label="Product filters">
+      <label class="search"><span>Search</span><input id="query" placeholder="Name, barcode, product ID"></label>
+      <label><span>Status</span><select id="statusFilter"><option value="all">all</option><option>Enabled</option><option>Disabled</option></select></label>
+      <label><span>Stock</span><select id="stockFilter"><option value="all">all</option><option value="in">in</option><option value="zero">zero</option><option value="large">large</option></select></label>
+      <label><span>Review</span><select id="reviewFilter"><option value="all">all</option><option value="pending">pending</option><option value="yes">yes</option><option value="no">no</option></select></label>
+      <label><span>Sort</span><select id="sortFilter"><option value="date">date</option><option value="name">name</option><option value="quantity">quantity</option><option value="price">price</option></select></label>
+    </section>
+
+    <section class="data">
+      <div class="section-head">
+        <div>
+          <p id="workspaceName">Admin workspace</p>
+          <h2><span id="shownCount">0</span> products shown</h2>
+        </div>
+        <div id="adminActions" class="actions">
+          <button class="secondary" id="resetReviews" type="button">Reset reviews</button>
+          <button id="exportCsv" type="button">Export CSV</button>
+        </div>
+      </div>
+      <div id="content"></div>
+    </section>
+
+    <footer class="pager">
+      <button id="prevPage" type="button">Prev</button>
+      <span id="pageLabel">Page 1 of 1</span>
+      <button id="nextPage" type="button">Next</button>
+    </footer>
+  </main>
+
+  <script>
+    const PAGE_SIZE = 36;
+    const REVIEW_KEY = "yaser-stock-reviews-v1";
+    const state = {
+      products: [],
+      role: "admin",
+      page: 1,
+      query: "",
+      status: "all",
+      stock: "all",
+      review: "all",
+      sort: "date",
+      reviews: JSON.parse(localStorage.getItem(REVIEW_KEY) || "{}")
+    };
+
+    const el = (id) => document.getElementById(id);
+    const numberValue = (value) => Number(String(value).split(" ").filter(Boolean).at(-1) || 0) || 0;
+    const qty = (value) => numberValue(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const money = (value) => String(value).split(" ").filter(Boolean).map((part) => Number(part).toFixed(3)).join(" -> ");
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+
+    function filteredProducts() {
+      const needle = state.query.trim().toLowerCase();
+      return state.products.filter((product) => {
+        const searchable = `${product.product_id} ${product.name} ${product.barcode}`.toLowerCase();
+        const review = state.reviews[product.product_id];
+        const quantity = numberValue(product.quantity);
+        if (needle && !searchable.includes(needle)) return false;
+        if (state.status !== "all" && product.status !== state.status) return false;
+        if (state.stock === "zero" && quantity !== 0) return false;
+        if (state.stock === "in" && quantity <= 0) return false;
+        if (state.stock === "large" && quantity < 100000) return false;
+        if (state.review === "pending" && review) return false;
+        if (state.review === "yes" && review !== "yes") return false;
+        if (state.review === "no" && review !== "no") return false;
+        return true;
+      }).sort((a, b) => {
+        if (state.sort === "name") return a.name.localeCompare(b.name);
+        if (state.sort === "quantity") return numberValue(b.quantity) - numberValue(a.quantity);
+        if (state.sort === "price") return numberValue(b.price) - numberValue(a.price);
+        return b.date_added.localeCompare(a.date_added);
+      });
+    }
+
+    function saveReviews() {
+      localStorage.setItem(REVIEW_KEY, JSON.stringify(state.reviews));
+    }
+
+    function mark(productId, value) {
+      state.reviews[productId] = value;
+      saveReviews();
+      render();
+    }
+
+    function clearReview(productId) {
+      delete state.reviews[productId];
+      saveReviews();
+      render();
+    }
+
+    function renderMetrics() {
+      const reviewed = Object.keys(state.reviews).filter((id) => state.products.some((product) => product.product_id === id)).length;
+      el("totalCount").textContent = state.products.length.toLocaleString();
+      el("enabledCount").textContent = state.products.filter((product) => product.status === "Enabled").length.toLocaleString();
+      el("disabledCount").textContent = state.products.filter((product) => product.status === "Disabled").length.toLocaleString();
+      el("zeroCount").textContent = state.products.filter((product) => numberValue(product.quantity) === 0).length.toLocaleString();
+      el("reviewedCount").textContent = reviewed.toLocaleString();
+      el("pendingCount").textContent = Math.max(state.products.length - reviewed, 0).toLocaleString();
+    }
+
+    function reviewButtons(product) {
+      const value = state.reviews[product.product_id];
+      return `
+        <div class="review-actions compact">
+          <button class="yes ${value === "yes" ? "active" : ""}" onclick="mark('${product.product_id}', 'yes')" type="button">Yes</button>
+          <button class="no ${value === "no" ? "active" : ""}" onclick="mark('${product.product_id}', 'no')" type="button">No</button>
+          <button class="clear" onclick="clearReview('${product.product_id}')" ${value ? "" : "disabled"} type="button">Clear</button>
+        </div>
+      `;
+    }
+
+    function statusPill(product) {
+      return `<span class="status ${product.status === "Enabled" ? "enabled" : "disabled"}">${esc(product.status)}</span>`;
+    }
+
+    function renderAdmin(rows) {
+      el("content").innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((product) => `
+                <tr>
+                  <td><span class="product-id">#${esc(product.product_id)}</span><strong>${esc(product.name || "no name")}</strong></td>
+                  <td>${esc(product.barcode)}</td>
+                  <td>${esc(money(product.price))} JD</td>
+                  <td>${esc(qty(product.quantity))}</td>
+                  <td>${statusPill(product)}</td>
+                  <td>${esc(product.date_added)}</td>
+                  <td>${reviewButtons(product)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderEmployee(rows) {
+      el("content").innerHTML = `
+        <div class="employee-list">
+          ${rows.map((product) => `
+            <article class="employee-item">
+              <div class="product-main">
+                <span class="product-id">#${esc(product.product_id)}</span>
+                <h3>${esc(product.name || "no name")}</h3>
+                <p>${esc(product.barcode)}</p>
+              </div>
+              <div class="facts">
+                <span>${esc(money(product.price))} JD</span>
+                <span>${esc(qty(product.quantity))} qty</span>
+                ${statusPill(product)}
+                <span>${esc(product.date_added)}</span>
+              </div>
+              ${reviewButtons(product)}
+            </article>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function exportCsv(rows) {
+      const headers = ["Product ID", "Name", "Barcode", "Price", "Status", "Quantity", "Date Added"];
+      const quote = (value) => {
+        const text = String(value ?? "");
+        return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      };
+      const csv = [headers.join(","), ...rows.map((row) => [row.product_id, row.name, row.barcode, row.price, row.status, row.quantity, row.date_added].map(quote).join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "yaser-mall-stock-products.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function render() {
+      renderMetrics();
+      const filtered = filteredProducts();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      state.page = Math.min(state.page, totalPages);
+      const start = (state.page - 1) * PAGE_SIZE;
+      const rows = filtered.slice(start, start + PAGE_SIZE);
+
+      el("adminRole").classList.toggle("active", state.role === "admin");
+      el("employeeRole").classList.toggle("active", state.role === "employee");
+      el("adminActions").style.display = state.role === "admin" ? "flex" : "none";
+      el("workspaceName").textContent = state.role === "admin" ? "Admin workspace" : "Employee workspace";
+      el("shownCount").textContent = filtered.length.toLocaleString();
+      el("pageLabel").textContent = `Page ${state.page} of ${totalPages}`;
+      el("prevPage").disabled = state.page === 1;
+      el("nextPage").disabled = state.page === totalPages;
+
+      if (state.role === "admin") renderAdmin(rows);
+      else renderEmployee(rows);
+    }
+
+    ["query", "statusFilter", "stockFilter", "reviewFilter", "sortFilter"].forEach((id) => {
+      el(id).addEventListener("input", (event) => {
+        const key = id === "statusFilter" ? "status" : id === "stockFilter" ? "stock" : id === "reviewFilter" ? "review" : id === "sortFilter" ? "sort" : "query";
+        state[key] = event.target.value;
+        state.page = 1;
+        render();
+      });
+    });
+
+    el("adminRole").addEventListener("click", () => { state.role = "admin"; render(); });
+    el("employeeRole").addEventListener("click", () => { state.role = "employee"; render(); });
+    el("prevPage").addEventListener("click", () => { state.page = Math.max(1, state.page - 1); render(); });
+    el("nextPage").addEventListener("click", () => { state.page += 1; render(); });
+    el("resetReviews").addEventListener("click", () => { state.reviews = {}; saveReviews(); render(); });
+    el("exportCsv").addEventListener("click", () => exportCsv(filteredProducts()));
+
+    fetch("products.json")
+      .then((response) => response.json())
+      .then((products) => {
+        state.products = products;
+        render();
+      })
+      .catch(() => {
+        el("content").innerHTML = "<div class='employee-list'><article class='employee-item'>Could not load products.json</article></div>";
+      });
+  </script>
+</body>
+</html>
