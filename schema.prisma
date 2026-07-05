@@ -96,3 +96,18 @@ model AuditPhoto {
   createdAt     DateTime    @default(now())
   auditReport   AuditReport @relation(fields: [auditReportId], references: [id], onDelete: Cascade)
 }
+
+model EmployeeAuditAction {
+  productId       String   @id
+  status          String
+  checkedAt       DateTime @default(now())
+  hideUntil       DateTime
+  product         Json
+  adminReviewedAt DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([checkedAt])
+  @@index([adminReviewedAt])
+}
