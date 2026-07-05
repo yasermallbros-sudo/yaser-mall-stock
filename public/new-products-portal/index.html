@@ -243,6 +243,22 @@
     .status.enabled { background: #e8f6ee; color: var(--green); }
     .status.disabled { background: #fdecec; color: var(--red); }
 
+    .review-pill {
+      display: inline-flex;
+      justify-content: center;
+      min-width: 74px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: var(--soft);
+      color: #344054;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .review-pill.yes { background: #e8f6ee; color: var(--green); }
+    .review-pill.no { background: #fdecec; color: var(--red); }
+    .review-pill.pending { background: #fff7e6; color: var(--amber); }
+
     .review-actions {
       display: grid;
       grid-template-columns: repeat(3, minmax(70px, 1fr));
@@ -390,7 +406,9 @@
   <script>
     const PAGE_SIZE = 36;
     const REVIEW_KEY = "yaser-stock-reviews-v1";
-    const DATA_VERSION = "2026-07-05-arabic-names";
+    const PRODUCTS_CACHE_KEY = "yaser-stock-products-from-2026-06-01";
+    const DATA_START_DATE = "2026-06-01";
+    const JORDAN_TIME_ZONE = "Asia/Amman";
     const state = {
       products: [],
       role: "admin",
@@ -400,6 +418,7 @@
       stock: "all",
       review: "all",
       sort: "date",
+      dataDateKey: "",
       reviews: JSON.parse(localStorage.getItem(REVIEW_KEY) || "{}")
     };
 
@@ -409,6 +428,39 @@
     const money = (value) => String(value).split(" ").filter(Boolean).map((part) => Number(part).toFixed(3)).join(" -> ");
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const productName = (product) => product.name_en || product.name || "";
+    const productDate = (product) => String(product.date_added || "").slice(0, 10);
+
+    function jordanDateKey(date = new Date()) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: JORDAN_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(date);
+      const value = (type) => parts.find((part) => part.type === type)?.value || "";
+      return `${value("year")}-${value("month")}-${value("day")}`;
+    }
+
+    function fromStartDate(products) {
+      return products.filter((product) => productDate(product) >= DATA_START_DATE);
+    }
+
+    function cacheProducts(products) {
+      try {
+        localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
+      } catch {
+        // The portal still works if browser storage is full or blocked.
+      }
+    }
+
+    function readCachedProducts() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || "[]");
+        return Array.isArray(cached) ? fromStartDate(cached) : [];
+      } catch {
+        return [];
+      }
+    }
 
     function filteredProducts() {
       const needle = state.query.trim().toLowerCase();
@@ -416,6 +468,7 @@
         const searchable = `${product.product_id} ${productName(product)} ${product.name_ar || ""} ${product.barcode || ""}`.toLowerCase();
         const review = state.reviews[product.product_id];
         const quantity = numberValue(product.quantity);
+        if (state.role === "employee" && review) return false;
         if (needle && !searchable.includes(needle)) return false;
         if (state.status !== "all" && product.status !== state.status) return false;
         if (state.stock === "zero" && quantity !== 0) return false;
@@ -463,9 +516,9 @@
       const value = state.reviews[product.product_id];
       return `
         <div class="review-actions compact">
-          <button class="yes ${value === "yes" ? "active" : ""}" onclick="mark('${product.product_id}', 'yes')" type="button">Yes</button>
-          <button class="no ${value === "no" ? "active" : ""}" onclick="mark('${product.product_id}', 'no')" type="button">No</button>
-          <button class="clear" onclick="clearReview('${product.product_id}')" ${value ? "" : "disabled"} type="button">Clear</button>
+          <button class="yes ${value === "yes" ? "active" : ""}" data-review-action="yes" data-product-id="${esc(product.product_id)}" type="button">Yes</button>
+          <button class="no ${value === "no" ? "active" : ""}" data-review-action="no" data-product-id="${esc(product.product_id)}" type="button">No</button>
+          <button class="clear" data-review-action="clear" data-product-id="${esc(product.product_id)}" ${value ? "" : "disabled"} type="button">Clear</button>
         </div>
       `;
     }
@@ -474,13 +527,18 @@
       return `<span class="status ${product.status === "Enabled" ? "enabled" : "disabled"}">${esc(product.status)}</span>`;
     }
 
+    function reviewPill(product) {
+      const value = state.reviews[product.product_id] || "pending";
+      return `<span class="review-pill ${value}">${value}</span>`;
+    }
+
     function renderAdmin(rows) {
       el("content").innerHTML = `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Action</th>
+                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Review</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -492,6 +550,7 @@
                   <td>${esc(qty(product.quantity))}</td>
                   <td>${statusPill(product)}</td>
                   <td>${esc(product.date_added)}</td>
+                  <td>${reviewPill(product)}</td>
                   <td>${reviewButtons(product)}</td>
                 </tr>
               `).join("")}
@@ -577,16 +636,48 @@
     el("nextPage").addEventListener("click", () => { state.page += 1; render(); });
     el("resetReviews").addEventListener("click", () => { state.reviews = {}; saveReviews(); render(); });
     el("exportCsv").addEventListener("click", () => exportCsv(filteredProducts()));
+    el("content").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-review-action]");
+      if (!button) return;
+      const productId = button.dataset.productId;
+      const action = button.dataset.reviewAction;
+      if (!productId) return;
+      if (action === "clear") clearReview(productId);
+      else if (action === "yes" || action === "no") mark(productId, action);
+    });
 
-    fetch(`products.json?v=${encodeURIComponent(DATA_VERSION)}`)
-      .then((response) => response.json())
-      .then((products) => {
-        state.products = products;
-        render();
-      })
-      .catch(() => {
-        el("content").innerHTML = "<div class='employee-list'><article class='employee-item'>Could not load products.json</article></div>";
-      });
+    function loadProducts() {
+      const dateKey = jordanDateKey();
+      state.dataDateKey = dateKey;
+      return fetch(`products.json?from=${encodeURIComponent(DATA_START_DATE)}&tz=${encodeURIComponent(JORDAN_TIME_ZONE)}&v=${encodeURIComponent(dateKey)}`, { cache: "no-store" })
+        .then((response) => response.json())
+        .then((products) => {
+          state.products = fromStartDate(products);
+          cacheProducts(state.products);
+          render();
+        })
+        .catch(() => {
+          const cachedProducts = readCachedProducts();
+          if (cachedProducts.length) {
+            state.products = cachedProducts;
+            render();
+            return;
+          }
+          el("content").innerHTML = "<div class='employee-list'><article class='employee-item'>Could not load products.json</article></div>";
+        });
+    }
+
+    setInterval(() => {
+      const nextDateKey = jordanDateKey();
+      if (state.dataDateKey && nextDateKey !== state.dataDateKey) loadProducts();
+    }, 60000);
+
+    const cachedProducts = readCachedProducts();
+    if (cachedProducts.length) {
+      state.products = cachedProducts;
+      render();
+    }
+    loadProducts();
   </script>
 </body>
 </html>
