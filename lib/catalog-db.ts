@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
+import { Buffer } from "node:buffer";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import { prisma } from "@/lib/prisma";
 import type { ReadyProduct } from "@/lib/ready-products";
 
@@ -60,6 +62,22 @@ async function readCatalogProductsFromIndex(file: string) {
   };
 }
 
+async function readCompressedCatalog(file: string) {
+  try {
+    const compressed = (await readFile(file, "utf8")).trim();
+    const catalog = parseJson<CatalogFile>(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8"));
+    return {
+      fetchedAt: catalog.fetchedAt ? new Date(catalog.fetchedAt) : undefined,
+      products: Array.isArray(catalog.products) ? catalog.products : [],
+    };
+  } catch {
+    return {
+      fetchedAt: undefined,
+      products: [],
+    };
+  }
+}
+
 function cleanQuantity(value: unknown) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) ? Number(number.toFixed(2)) : null;
@@ -69,6 +87,7 @@ export async function readCatalogProductsFromFiles() {
   const publicDir = path.join(process.cwd(), "public");
   const dataDir = path.join(process.cwd(), "data");
   const catalogs = await Promise.all([
+    readCompressedCatalog(path.join(dataDir, "yaser-live-products.full.json.gz.b64")),
     readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-products.txt")),
     readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-instock-products.json")),
     readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-instock-products.txt")),
@@ -205,7 +224,8 @@ async function upsertBatch(products: ReadyProduct[], syncedAt: Date, mode: SyncM
 export async function syncCatalogToDatabase(options: { mode?: SyncMode; batchSize?: number } = {}) {
   const mode = options.mode ?? "newOnly";
   const batchSize = options.batchSize ?? 500;
-  const { fetchedAt, products } = await readCatalogProductsFromFiles();
+  const { products } = await readCatalogProductsFromFiles();
+  const fetchedAt = new Date();
   let saved = 0;
 
   for (let index = 0; index < products.length; index += batchSize) {
