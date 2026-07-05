@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient, Role } from "@prisma/client";
+import { syncCatalogToDatabase } from "../lib/catalog-db";
 
 const prisma = new PrismaClient();
 
@@ -37,7 +38,8 @@ async function main() {
   for (const product of products) {
     await prisma.product.upsert({ where: { productUrl: product.productUrl }, update: product, create: product });
   }
-  console.log("Ready app seeded:", users.length, "users and", products.length, "products with JOD prices and categories");
+  const catalog = await syncCatalogToDatabase({ mode: "newOnly" });
+  console.log("Ready app seeded:", users.length, "users and", products.length, "starter products,", catalog.saved, "catalog rows checked");
 }
 
 main().finally(() => prisma.$disconnect());
