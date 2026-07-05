@@ -310,10 +310,10 @@ export default function EmployeePage() {
                 </div>
                 <div className="space-y-2 p-3">
                   <div className="text-xs text-slate-500">{product.id}</div>
-                  <h2 className="min-h-10 text-sm font-semibold leading-5">
+                  <h2 className="min-h-8 text-xs font-medium leading-4 text-slate-700">
                     {product.englishName || product.arabicName || "Product"}
                   </h2>
-                  <p className="min-h-8 text-xs text-slate-600" dir="rtl">
+                  <p className="min-h-10 text-xs font-semibold leading-5 text-slate-900" dir="rtl">
                     {product.arabicName || ""}
                   </p>
                   <div className="rounded-lg bg-slate-100 p-2 text-xs text-slate-600">
