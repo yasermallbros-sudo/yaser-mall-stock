@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { isHiddenForAudit, readAuditMap } from "@/lib/audit-store";
+import { prisma } from "@/lib/prisma";
 
 type Product = {
   id: string;
@@ -85,7 +86,21 @@ async function catalogCacheKey() {
     path.join(root, "data", "fast-catalog.json"),
     path.join(root, "data", "yaser-category-map.json"),
   ];
-  return (await Promise.all(files.map(fileMtime))).join(":");
+  let dbKey = "db-missing";
+  try {
+    const [count, latest] = await Promise.all([
+      prisma.product.count(),
+      prisma.product.findFirst({
+        where: { catalogSyncedAt: { not: null } },
+        orderBy: { catalogSyncedAt: "desc" },
+        select: { catalogSyncedAt: true },
+      }),
+    ]);
+    dbKey = `${count}:${latest?.catalogSyncedAt?.getTime() ?? 0}`;
+  } catch {
+    dbKey = "db-error";
+  }
+  return `${dbKey}:${(await Promise.all(files.map(fileMtime))).join(":")}`;
 }
 
 async function readFullLiveCatalog() {
@@ -160,12 +175,69 @@ async function readBestFallbackCatalog() {
   throw new Error("No fallback catalog is available.");
 }
 
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.map(clean).filter(Boolean) : [];
+}
+
+async function readDatabaseCatalog(): Promise<Catalog | undefined> {
+  const count = await prisma.product.count();
+  if (count < 100) return undefined;
+
+  const rows = await prisma.product.findMany({
+    select: {
+      id: true,
+      sourceProductId: true,
+      englishName: true,
+      arabicName: true,
+      price: true,
+      imageUrl: true,
+      brand: true,
+      mainCategory: true,
+      subCategory: true,
+      sourceStock: true,
+      quantity: true,
+      allCategories: true,
+      productUrl: true,
+      catalogSyncedAt: true,
+    },
+  });
+
+  const products: Product[] = rows.map((row) => ({
+    id: row.sourceProductId || row.id,
+    englishName: row.englishName,
+    arabicName: row.arabicName,
+    priceJod: Number(row.price ?? 0),
+    imageUrl: row.imageUrl,
+    brand: row.brand,
+    mainCategory: row.mainCategory,
+    subCategory: row.subCategory,
+    sourceStock: row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK",
+    quantity: row.quantity === null ? null : Number(row.quantity),
+    allCategories: asStringArray(row.allCategories),
+    productUrl: row.productUrl,
+  }));
+  const fetchedAt = rows.reduce<Date | undefined>((latest, row) => {
+    if (!row.catalogSyncedAt) return latest;
+    return !latest || row.catalogSyncedAt > latest ? row.catalogSyncedAt : latest;
+  }, undefined);
+
+  return {
+    fetchedAt: (fetchedAt ?? new Date()).toISOString(),
+    source: "Yaser Mall online cloud catalog",
+    categoryCount: new Set(products.map((product) => product.mainCategory).filter(Boolean)).size,
+    uniqueProductCount: products.length,
+    inStock: products.filter((product) => product.sourceStock !== "OUT_OF_STOCK").length,
+    outOfStock: products.filter((product) => product.sourceStock === "OUT_OF_STOCK").length,
+    products,
+  } satisfies Catalog;
+}
+
 async function readCatalog() {
   const nextCacheKey = await catalogCacheKey();
   if (cachedCatalog && cachedCatalogKey === nextCacheKey) return cachedCatalog;
 
   try {
-    const full = await readFullLiveCatalog();
+    const full = await readDatabaseCatalog() ?? await readFullLiveCatalog();
     const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
     const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
     cachedCatalog = {
