@@ -36,7 +36,7 @@ type Catalog = {
   products?: Product[];
 };
 
-type ProductFilterMap = Record<string, [string, string, string[]]>;
+type ProductFilterMap = Record<string, [string, string, string[], number?]>;
 
 const fallbackProducts: Product[] = [
   {
@@ -239,11 +239,13 @@ async function readDatabaseCatalog(): Promise<Catalog | undefined> {
     const id = row.sourceProductId || row.id;
     const mapped = productFilterMap[String(id)];
     const mappedAll = Array.isArray(mapped?.[2]) ? mapped[2].map(clean).filter(Boolean) : [];
+    const mappedPrice = cleanPrice(mapped?.[3]);
+    const rowPrice = Number(row.price ?? 0);
     return {
       id,
       englishName: row.englishName,
       arabicName: row.arabicName,
-      priceJod: Number(row.price ?? 0),
+      priceJod: rowPrice > 0 ? rowPrice : mappedPrice,
       imageUrl: row.imageUrl,
       brand: row.brand,
       mainCategory: clean(mapped?.[0]) || row.mainCategory,
