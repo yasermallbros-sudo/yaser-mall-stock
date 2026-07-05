@@ -450,13 +450,16 @@ function productTextMatchesSubFilter(product: Product, subCategory: string) {
   if (!filter || !text) return false;
 
   const keywordRules = [
-    { filters: ["المراوح", "مروحة"], keywords: ["fan", "مروحة", "مراوح"] },
     { filters: ["مراوح الشفط"], keywords: ["suction", "exhaust", "شفط"] },
     { filters: ["صاعق الحشرات"], keywords: ["insect", "bug", "mosquito", "killer", "صاعق", "حشرات", "ناموس"] },
     { filters: ["مكيفات الهواء"], keywords: ["air conditioner", "conditioner", "ac ", "split", "مكيف", "مكيفات"] },
+    { filters: ["المراوح", "مروحة"], keywords: ["fan", "مروحة", "مراوح"] },
   ];
 
-  const rule = keywordRules.find((item) => item.filters.some((itemFilter) => labelMatches(itemFilter, filter)));
+  const comparableFilter = comparableLabel(filter);
+  const rule = keywordRules.find((item) =>
+    item.filters.some((itemFilter) => comparableLabel(itemFilter) === comparableFilter)
+  );
   if (rule) return rule.keywords.some((keyword) => text.includes(keyword));
 
   const tokens = labelTokens(filter).filter((token) => token.length >= 4);
