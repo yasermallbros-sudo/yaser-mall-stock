@@ -295,7 +295,7 @@ export default function EmployeePage() {
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {products.length === 0 ? (
             <div className="col-span-full rounded-xl border bg-white p-6 text-center text-sm text-slate-600">
-              {status === "Ready" ? "No unchecked in-stock products." : status}
+              {status === "Ready" ? `No unchecked ${stockStatus === "OUT_OF_STOCK" ? "out-of-stock" : "in-stock"} products.` : status}
             </div>
           ) : (
             products.map((product) => (
