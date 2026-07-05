@@ -312,30 +312,67 @@ function productFromDatabaseRow(row: {
   quantity: unknown;
   allCategories: unknown;
   productUrl: string;
-}) {
-  const mainCategory = clean(row.mainCategory);
+}, productFilterMap: ProductFilterMap) {
+  const id = row.sourceProductId || row.id;
+  const mapped = productFilterMap[String(id)];
+  const mappedAll = Array.isArray(mapped?.[2]) ? mapped[2].map(clean).filter(Boolean) : [];
+  const mappedPrice = cleanPrice(mapped?.[3]);
+  const mappedStock = mapped?.[4] === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : mapped?.[4] === "IN_STOCK" ? "IN_STOCK" : undefined;
+  const rowAll = asStringArray(row.allCategories);
+  const mainCategory = clean(mapped?.[0]) || clean(row.mainCategory);
+  const subCategory = clean(mapped?.[1]) || clean(row.subCategory) || rowAll.find((label) => !exactLabelMatches(label, mainCategory)) || "";
+  const allCategories = Array.from(new Set([...(mappedAll.length > 0 ? mappedAll : rowAll), mainCategory, subCategory].map(clean).filter(Boolean)));
+  const rowPrice = Number(row.price ?? 0);
   return {
-    id: row.sourceProductId || row.id,
+    id,
     englishName: row.englishName,
     arabicName: row.arabicName,
-    priceJod: Number(row.price ?? 0),
+    priceJod: rowPrice > 0 ? rowPrice : mappedPrice,
     imageUrl: row.imageUrl || "/placeholder.svg",
     brand: row.brand || "Yaser Mall",
     mainCategory,
-    subCategory: clean(row.subCategory),
-    sourceStock: row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK",
+    subCategory,
+    sourceStock: mappedStock ?? (row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK"),
     quantity: row.quantity === null ? null : Number(row.quantity),
-    allCategories: asStringArray(row.allCategories).length > 0 ? asStringArray(row.allCategories) : [mainCategory].filter(Boolean),
+    allCategories,
     productUrl: row.productUrl,
   } satisfies Product;
 }
 
 async function readCategoryMetadata() {
-  const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
-  const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
+  const [fast, map, productFilterMap] = await Promise.all([
+    readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json")),
+    readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json")),
+    readProductFilterMap(),
+  ]);
+  const categorySet = new Set<string>((map?.categories ?? fast?.categories ?? []).map(clean).filter(Boolean));
+  const categoryTree: Record<string, Set<string>> = {};
+  for (const [main, subs] of Object.entries(map?.categoryTree ?? fast?.categoryTree ?? {})) {
+    const cleanMain = clean(main);
+    if (!cleanMain) continue;
+    categorySet.add(cleanMain);
+    categoryTree[cleanMain] ??= new Set<string>();
+    for (const sub of subs ?? []) {
+      const cleanSub = clean(sub);
+      if (cleanSub && !exactLabelMatches(cleanSub, cleanMain)) categoryTree[cleanMain].add(cleanSub);
+    }
+  }
+  for (const item of Object.values(productFilterMap)) {
+    const main = clean(item?.[0]);
+    const sub = clean(item?.[1]);
+    if (!main) continue;
+    categorySet.add(main);
+    categoryTree[main] ??= new Set<string>();
+    if (sub && !exactLabelMatches(sub, main)) categoryTree[main].add(sub);
+    for (const label of item?.[2] ?? []) {
+      const cleanLabel = clean(label);
+      if (cleanLabel && !exactLabelMatches(cleanLabel, main)) categoryTree[main].add(cleanLabel);
+    }
+  }
+  const categories = Array.from(categorySet).sort();
   return {
-    categories: map?.categories ?? fast?.categories ?? [],
-    categoryTree: map?.categoryTree ?? fast?.categoryTree ?? {},
+    categories,
+    categoryTree: Object.fromEntries(categories.map((category) => [category, Array.from(categoryTree[category] ?? []).sort()])) as Record<string, string[]>,
     categoryImages: map?.categoryImages ?? fast?.categoryImages ?? {},
   };
 }
@@ -359,19 +396,26 @@ async function readDatabaseProductsPage(options: { q: string; category: string; 
   const count = await prisma.product.count();
   if (count < 100) return undefined;
 
+  const productFilterMap = await readProductFilterMap();
   const hiddenIds = await readHiddenProductIds();
-  const where: Record<string, unknown> = {};
-  if (hiddenIds.length > 0) where.id = { notIn: hiddenIds };
-  if (options.status !== "ALL") where.sourceStock = options.status;
+  const andClauses: Record<string, unknown>[] = [];
+  if (hiddenIds.length > 0) andClauses.push({ id: { notIn: hiddenIds } });
+  if (options.status !== "ALL") andClauses.push({ sourceStock: options.status });
   if (options.category) {
-    where.OR = [
+    andClauses.push({ OR: [
       { mainCategory: options.category },
       { category: options.category },
-    ];
+      { allCategories: { array_contains: [options.category] } },
+    ] });
   }
-  if (options.subCategory) where.subCategory = options.subCategory;
+  if (options.subCategory) {
+    andClauses.push({ OR: [
+      { subCategory: options.subCategory },
+      { allCategories: { array_contains: [options.subCategory] } },
+    ] });
+  }
   if (options.q) {
-    const search = {
+    andClauses.push({
       OR: [
         { id: { contains: options.q, mode: "insensitive" } },
         { sourceProductId: { contains: options.q, mode: "insensitive" } },
@@ -381,14 +425,9 @@ async function readDatabaseProductsPage(options: { q: string; category: string; 
         { mainCategory: { contains: options.q, mode: "insensitive" } },
         { subCategory: { contains: options.q, mode: "insensitive" } },
       ],
-    };
-    if (where.OR) {
-      where.AND = [{ OR: where.OR }, search];
-      delete where.OR;
-    } else {
-      Object.assign(where, search);
-    }
+    });
   }
+  const where = andClauses.length > 0 ? { AND: andClauses } : {};
 
   const [rows, totalFiltered, latest, inStock, outOfStock, metadata] = await Promise.all([
     prisma.product.findMany({
@@ -422,7 +461,7 @@ async function readDatabaseProductsPage(options: { q: string; category: string; 
     readCategoryMetadata(),
   ]);
 
-  const products = await fillMissingLivePrices(rows.map(productFromDatabaseRow));
+  const products = await fillMissingLivePrices(rows.map((row) => productFromDatabaseRow(row, productFilterMap)));
   return {
     fetchedAt: latest?.catalogSyncedAt?.toISOString() ?? new Date().toISOString(),
     source: "Yaser Mall online cloud catalog",
