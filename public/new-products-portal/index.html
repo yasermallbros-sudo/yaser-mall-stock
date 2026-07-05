@@ -502,7 +502,7 @@
         const searchable = `${product.product_id} ${productName(product)} ${product.name_ar || ""} ${product.barcode || ""}`.toLowerCase();
         const review = state.reviews[product.product_id];
         const quantity = numberValue(product.quantity);
-        if (state.role === "employee" && review) return false;
+        if (state.role === "employee" && review === "yes") return false;
         if (needle && !searchable.includes(needle)) return false;
         if (state.status !== "all" && product.status !== state.status) return false;
         if (state.stock === "zero" && quantity !== 0) return false;
