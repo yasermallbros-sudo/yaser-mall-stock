@@ -25,6 +25,33 @@ function cleanPrice(value: unknown) {
   return Number.isFinite(number) && number > 0 ? Number(number.toFixed(2)) : 0;
 }
 
+async function readOptionalCatalogFile(file: string) {
+  try {
+    return parseJson<CatalogFile>(await readFile(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+async function readCatalogProductsFromIndex(file: string) {
+  const index = await readOptionalCatalogFile(file);
+  const products: ReadyProduct[] = [];
+
+  if (Array.isArray(index?.products)) products.push(...index.products);
+  for (const part of index?.productParts ?? []) {
+    try {
+      products.push(...parseJson<ReadyProduct[]>(await readFile(path.join(path.dirname(file), part), "utf8")));
+    } catch {
+      // Keep importing the catalog files that exist on this server.
+    }
+  }
+
+  return {
+    fetchedAt: index?.fetchedAt ? new Date(index.fetchedAt) : undefined,
+    products,
+  };
+}
+
 function cleanQuantity(value: unknown) {
   const number = Number(value ?? 0);
   return Number.isFinite(number) ? Number(number.toFixed(2)) : null;
@@ -32,26 +59,31 @@ function cleanQuantity(value: unknown) {
 
 export async function readCatalogProductsFromFiles() {
   const publicDir = path.join(process.cwd(), "public");
-  const indexFile = path.join(publicDir, "yaser-live-products.txt");
-  const index = parseJson<CatalogFile>(await readFile(indexFile, "utf8"));
-  const products: ReadyProduct[] = [];
+  const dataDir = path.join(process.cwd(), "data");
+  const catalogs = await Promise.all([
+    readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-products.txt")),
+    readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-instock-products.json")),
+    readCatalogProductsFromIndex(path.join(publicDir, "yaser-live-instock-products.txt")),
+    readCatalogProductsFromIndex(path.join(dataDir, "fast-catalog.json")),
+  ]);
+  const bestCatalog = catalogs
+    .filter((catalog) => catalog.products.length > 0)
+    .sort((a, b) => b.products.length - a.products.length)[0];
 
-  if (Array.isArray(index.products)) products.push(...index.products);
-  for (const part of index.productParts ?? []) {
-    try {
-      products.push(...parseJson<ReadyProduct[]>(await readFile(path.join(publicDir, part), "utf8")));
-    } catch {
-      // Keep importing the available catalog parts.
-    }
+  if (!bestCatalog) {
+    return {
+      fetchedAt: new Date(),
+      products: [],
+    };
   }
 
   const byId = new Map<string, ReadyProduct>();
-  for (const product of products) {
+  for (const product of bestCatalog.products) {
     if (product?.id) byId.set(String(product.id), product);
   }
 
   return {
-    fetchedAt: index.fetchedAt ? new Date(index.fetchedAt) : new Date(),
+    fetchedAt: bestCatalog.fetchedAt ?? new Date(),
     products: Array.from(byId.values()),
   };
 }
