@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import type { ReadyProduct } from "@/lib/ready-products";
+import { prisma } from "@/lib/prisma";
 
 export type LiveProductData = {
   fetchedAt: string;
@@ -67,6 +68,27 @@ const monthlyBestOfferFilters: OfferFilterGroup[] = [
   { label: "Tea & Coffee", targets: ["\u0627\u0644\u0634\u0627\u064a \u0648\u0627\u0644\u0642\u0647\u0648\u0629"] }
 ];
 
+async function latestDatabaseCatalogSyncDate() {
+  try {
+    const latest = await prisma.product.findFirst({
+      where: { catalogSyncedAt: { not: null } },
+      orderBy: { catalogSyncedAt: "desc" },
+      select: { catalogSyncedAt: true },
+    });
+    return latest?.catalogSyncedAt?.toISOString();
+  } catch {
+    return undefined;
+  }
+}
+
+function withLatestSyncDate<T extends { fetchedAt: string }>(data: T, databaseDate?: string) {
+  const fileTime = new Date(data.fetchedAt).getTime();
+  const databaseTime = new Date(databaseDate ?? "").getTime();
+  return Number.isFinite(databaseTime) && databaseTime > (Number.isFinite(fileTime) ? fileTime : 0)
+    ? { ...data, fetchedAt: databaseDate! }
+    : data;
+}
+
 export function starterLiveProductData(): LiveProductData {
   return {
     fetchedAt: "2026-07-04T00:00:00.000Z",
@@ -108,10 +130,13 @@ export function starterLiveProductsPage(): LiveProductsPage {
 async function getFastCatalog() {
   const file = path.join(process.cwd(), "data", "fast-catalog.json");
   try {
+    const databaseDate = await latestDatabaseCatalogSyncDate();
     const fileStat = await stat(file);
     const mtime = fileStat.mtimeMs;
-    if (cachedFastCatalog && cachedFastCatalogMtime === mtime) return cachedFastCatalog;
-    cachedFastCatalog = JSON.parse(await readFile(file, "utf8")) as FastCatalog;
+    if (cachedFastCatalog && cachedFastCatalogMtime === mtime) {
+      return withLatestSyncDate(cachedFastCatalog, databaseDate);
+    }
+    cachedFastCatalog = withLatestSyncDate(JSON.parse(await readFile(file, "utf8")) as FastCatalog, databaseDate);
     cachedFastCatalogMtime = mtime;
     return cachedFastCatalog;
   } catch {
@@ -188,8 +213,9 @@ export async function getLiveProductData(options: { forceFresh?: boolean } = {})
       stat(compressedFile).catch(() => undefined)
     ]);
     const mtime = (fileStat?.mtimeMs ?? 0) + (compressedStat?.mtimeMs ?? 0);
-    if (cachedData && cachedDataMtime === mtime) return cachedData;
-    cachedData = await readLiveProductFile(file);
+    const databaseDate = await latestDatabaseCatalogSyncDate();
+    if (cachedData && cachedDataMtime === mtime) return withLatestSyncDate(cachedData, databaseDate);
+    cachedData = withLatestSyncDate(await readLiveProductFile(file), databaseDate);
     cachedDataMtime = mtime;
   } catch {
     cachedData = starterLiveProductData();
