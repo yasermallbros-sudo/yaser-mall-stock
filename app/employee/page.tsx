@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const PAGE_SIZE = 120;
 const MAX_ITEMS = 5000;
+type StockStatus = "IN_STOCK" | "OUT_OF_STOCK";
 
 type Product = {
   id: string;
@@ -45,12 +46,13 @@ export default function EmployeePage() {
   const [totalFiltered, setTotalFiltered] = useState(0);
   const [lastSync, setLastSync] = useState("");
   const [status, setStatus] = useState("Loading live items...");
+  const [stockStatus, setStockStatus] = useState<StockStatus>("IN_STOCK");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     setLimit(PAGE_SIZE);
-  }, [selectedCategory, selectedSubCategory]);
+  }, [selectedCategory, selectedSubCategory, stockStatus]);
 
   useEffect(() => {
     let active = true;
@@ -59,7 +61,7 @@ export default function EmployeePage() {
       try {
         setStatus(limit > PAGE_SIZE ? "Loading more items..." : "Loading live items...");
         const params = new URLSearchParams({
-          status: "IN_STOCK",
+          status: stockStatus,
           limit: String(limit),
         });
         if (selectedCategory) params.set("category", selectedCategory);
@@ -93,7 +95,7 @@ export default function EmployeePage() {
     return () => {
       active = false;
     };
-  }, [selectedCategory, selectedSubCategory, limit]);
+  }, [selectedCategory, selectedSubCategory, stockStatus, limit]);
 
   useEffect(() => {
     function loadMoreOnScroll() {
@@ -152,11 +154,11 @@ export default function EmployeePage() {
         body,
         headers: { accept: "application/json" },
       });
-      const result = (await response.json().catch(() => ({ ok: false, updated: 0 }))) as { ok?: boolean; updated?: number; fetchedAt?: string };
+      const result = (await response.json().catch(() => ({ ok: false, updated: 0 }))) as { ok?: boolean; updated?: number; fetchedAt?: string; database?: { saved?: number; mode?: string } };
       if (!response.ok || !result.ok) throw new Error("Sync failed");
       setLastSync(result.fetchedAt ? new Date(result.fetchedAt).toLocaleString() : new Date().toLocaleString());
       setLimit(PAGE_SIZE);
-      setStatus(`Sync complete: ${Number(result.updated ?? 0)} products updated`);
+      setStatus(`Sync complete: ${Number(result.database?.saved ?? result.updated ?? 0)} catalog rows checked`);
     } catch {
       setStatus("Sync failed. Try again.");
     } finally {
@@ -205,6 +207,21 @@ export default function EmployeePage() {
             <p className="text-sm font-semibold">{status}</p>
             {lastSync ? <p className="mt-1 text-[11px] text-slate-500">{lastSync}</p> : null}
           </div>
+        </section>
+
+        <section className="grid grid-cols-2 gap-2 rounded-xl border bg-white p-2">
+          <button
+            className={`h-11 rounded-lg text-sm font-bold ${stockStatus === "IN_STOCK" ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-700"}`}
+            onClick={() => setStockStatus("IN_STOCK")}
+          >
+            In stock
+          </button>
+          <button
+            className={`h-11 rounded-lg text-sm font-bold ${stockStatus === "OUT_OF_STOCK" ? "bg-red-700 text-white" : "bg-slate-100 text-slate-700"}`}
+            onClick={() => setStockStatus("OUT_OF_STOCK")}
+          >
+            Out of stock
+          </button>
         </section>
 
         <section className="space-y-3 rounded-xl border bg-white p-3">
