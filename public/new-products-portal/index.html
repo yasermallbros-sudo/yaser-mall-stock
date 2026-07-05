@@ -225,10 +225,23 @@
     .arabic-name {
       display: block;
       margin-top: 4px;
-      color: var(--muted);
-      font-size: 13px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 800;
       line-height: 1.4;
       text-align: left;
+    }
+    .barcode-value {
+      display: block;
+      color: #273444;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .time-value {
+      white-space: nowrap;
     }
 
     .status {
@@ -293,6 +306,7 @@
     .product-main h3 {
       margin: 0 0 6px;
       font-size: 16px;
+      line-height: 1.35;
     }
     .product-main p {
       margin: 0;
@@ -428,7 +442,10 @@
     const money = (value) => String(value).split(" ").filter(Boolean).map((part) => Number(part).toFixed(3)).join(" -> ");
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
     const productName = (product) => product.name_en || product.name || "";
+    const productDisplayName = (product) => product.name_ar || productName(product) || "no name";
+    const productBarcode = (product) => product.barcode || "";
     const productDate = (product) => String(product.date_added || "").slice(0, 10);
+    const productDateTime = (product) => String(product.date_added || "").replace("T", " ").slice(0, 16);
 
     function jordanDateKey(date = new Date()) {
       const parts = new Intl.DateTimeFormat("en-CA", {
@@ -479,7 +496,7 @@
         if (state.review === "no" && review !== "no") return false;
         return true;
       }).sort((a, b) => {
-        if (state.sort === "name") return productName(a).localeCompare(productName(b));
+        if (state.sort === "name") return productDisplayName(a).localeCompare(productDisplayName(b));
         if (state.sort === "quantity") return numberValue(b.quantity) - numberValue(a.quantity);
         if (state.sort === "price") return numberValue(b.price) - numberValue(a.price);
         return b.date_added.localeCompare(a.date_added);
@@ -538,18 +555,17 @@
           <table>
             <thead>
               <tr>
-                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Review</th><th>Action</th>
+                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Date added</th><th>Review</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
               ${rows.map((product) => `
                 <tr>
-                  <td><span class="product-id">#${esc(product.product_id)}</span><strong>${esc(productName(product) || "no name")}</strong>${product.name_ar ? `<span class="arabic-name" dir="rtl">${esc(product.name_ar)}</span>` : ""}</td>
-                  <td>${esc(product.barcode)}</td>
+                  <td><span class="product-id">#${esc(product.product_id)}</span><strong class="arabic-name" dir="rtl">${esc(productDisplayName(product))}</strong></td>
+                  <td><span class="barcode-value">${esc(productBarcode(product))}</span></td>
                   <td>${esc(money(product.price))} JD</td>
                   <td>${esc(qty(product.quantity))}</td>
-                  <td>${statusPill(product)}</td>
-                  <td>${esc(product.date_added)}</td>
+                  <td><span class="time-value">${esc(productDateTime(product))}</span></td>
                   <td>${reviewPill(product)}</td>
                   <td>${reviewButtons(product)}</td>
                 </tr>
@@ -567,15 +583,13 @@
             <article class="employee-item">
               <div class="product-main">
                 <span class="product-id">#${esc(product.product_id)}</span>
-                <h3>${esc(productName(product) || "no name")}</h3>
-                ${product.name_ar ? `<p class="arabic-name" dir="rtl">${esc(product.name_ar)}</p>` : ""}
-                <p>${esc(product.barcode)}</p>
+                <h3 class="arabic-name" dir="rtl">${esc(productDisplayName(product))}</h3>
+                <p class="barcode-value">${esc(productBarcode(product))}</p>
               </div>
               <div class="facts">
                 <span>${esc(money(product.price))} JD</span>
                 <span>${esc(qty(product.quantity))} qty</span>
-                ${statusPill(product)}
-                <span>${esc(product.date_added)}</span>
+                <span class="time-value">${esc(productDateTime(product))}</span>
               </div>
               ${reviewButtons(product)}
             </article>
