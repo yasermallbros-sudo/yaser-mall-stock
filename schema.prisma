@@ -40,6 +40,7 @@ model User {
 
 model Product {
   id           String        @id @default(cuid())
+  sourceProductId String?    @unique
   englishName  String
   arabicName   String?
   price        Decimal       @db.Decimal(12, 2)
@@ -48,13 +49,20 @@ model Product {
   category     String?
   mainCategory String?
   subCategory  String?
+  sourceStock  String        @default("IN_STOCK")
+  quantity     Decimal?      @db.Decimal(14, 2)
+  allCategories Json?
   productUrl   String        @unique
   sku          String?       @unique
   sourceHash   String?
+  catalogSyncedAt DateTime?
+  lastSeenAt   DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   auditReports AuditReport[]
 
+  @@index([sourceProductId])
+  @@index([sourceStock])
   @@index([category])
   @@index([mainCategory])
   @@index([subCategory])
