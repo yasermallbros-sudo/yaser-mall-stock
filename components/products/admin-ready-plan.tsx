@@ -19,6 +19,12 @@ function fullDate(value: string) {
   return new Intl.DateTimeFormat("en-JO", { dateStyle: "full", timeStyle: "medium" }).format(new Date(value));
 }
 
+function nextFullSyncDate(value: string) {
+  const date = new Date(value);
+  date.setDate(date.getDate() + 30);
+  return date.toISOString();
+}
+
 function statusClass(status?: string) {
   return status === "OUT_OF_STOCK" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary";
 }
@@ -100,7 +106,7 @@ export function AdminReadyPlan({ initialData, auditRecords, initialQuery, curren
     <header className="sticky top-0 z-10 border-b bg-card/95 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3"><div className="flex items-center gap-2 text-lg font-bold text-primary"><ClipboardList className="h-5 w-5" />Admin Item Plan</div><Link href="/employee" className="text-sm text-muted-foreground underline">Employee app</Link></div></header>
     <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
       <section className="grid gap-3 sm:grid-cols-4"><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Not checked</p><p className="text-2xl font-bold">{notCheckedProducts.length.toLocaleString()}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">In report</p><p className="text-2xl font-bold">{inReports.length.toLocaleString()}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Out report</p><p className="text-2xl font-bold">{outReports.length.toLocaleString()}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Checked items</p><p className="text-2xl font-bold">{checkedReports.length.toLocaleString()}</p></div></section>
-      <section className="rounded-xl border bg-card p-4 text-sm text-muted-foreground"><p>Live source: Yaser Mall online</p><p><span className="font-semibold text-foreground">Page refreshed:</span> {fullDate(refreshedAt)}</p><p><span className="font-semibold text-foreground">Catalog sync date:</span> {fullDate(initialData.fetchedAt)}</p>{(selectedCategory || selectedSubCategory) && <p><span className="font-semibold text-foreground">Open:</span> {selectedSubCategory || selectedCategory}</p>}<p>Yaser source stock: {initialData.inStock.toLocaleString()} in stock, {initialData.outOfStock.toLocaleString()} out of stock.</p><p>Admin reviewed reports: {reviewed.toLocaleString()} / {reportRecords.length.toLocaleString()} shown, {allReportRecords.length.toLocaleString()} total.</p></section>
+      <section className="rounded-xl border bg-card p-4 text-sm text-muted-foreground"><p>Live source: Yaser Mall online</p><p><span className="font-semibold text-foreground">Page refreshed:</span> {fullDate(refreshedAt)}</p><p><span className="font-semibold text-foreground">Catalog sync date:</span> {fullDate(initialData.fetchedAt)}</p><p><span className="font-semibold text-foreground">Next 30-day full sync:</span> {fullDate(nextFullSyncDate(initialData.fetchedAt))}</p>{(selectedCategory || selectedSubCategory) && <p><span className="font-semibold text-foreground">Open:</span> {selectedSubCategory || selectedCategory}</p>}<p>Yaser source stock: {initialData.inStock.toLocaleString()} in stock, {initialData.outOfStock.toLocaleString()} out of stock.</p><p>Admin reviewed reports: {reviewed.toLocaleString()} / {reportRecords.length.toLocaleString()} shown, {allReportRecords.length.toLocaleString()} total.</p></section>
       <form action="/admin/items" className="rounded-xl border bg-card p-4">
         <input type="hidden" name="view" value={view === "NOT_CHECKED" ? "" : view} />
         <input type="hidden" name="limit" value={currentLimit} />
