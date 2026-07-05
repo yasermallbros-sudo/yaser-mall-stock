@@ -300,6 +300,22 @@ function clean(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+function exactLabelKey(value: unknown) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/&/g, "و")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function exactLabelMatches(left: unknown, right: unknown) {
+  const a = exactLabelKey(left);
+  const b = exactLabelKey(right);
+  return Boolean(a && b && a === b);
+}
+
 function cleanPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return Number(value.toFixed(2));
   if (typeof value !== "string") return 0;
@@ -307,7 +323,7 @@ function cleanPrice(value: unknown) {
   return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : 0;
 }
 
-function liveSalePrice(live: Record<string, unknown>) {
+function liveSalePriceFromObject(live: Record<string, unknown>) {
   const saleFields = [
     "special",
     "formatted_special",
@@ -328,7 +344,38 @@ function liveSalePrice(live: Record<string, unknown>) {
     if (price > 0) return price;
   }
 
+  return 0;
+}
+
+function liveRegularPriceFromObject(live: Record<string, unknown>) {
   return cleanPrice(live.price) || cleanPrice(live.formatted_price);
+}
+
+function findLivePriceDeep(value: unknown): { sale: number; regular: number } {
+  if (!value || typeof value !== "object") return { sale: 0, regular: 0 };
+  if (Array.isArray(value)) {
+    return value.reduce((best, item) => {
+      const next = findLivePriceDeep(item);
+      return { sale: best.sale || next.sale, regular: best.regular || next.regular };
+    }, { sale: 0, regular: 0 });
+  }
+
+  const object = value as Record<string, unknown>;
+  const ownSale = liveSalePriceFromObject(object);
+  const ownRegular = liveRegularPriceFromObject(object);
+  if (ownSale > 0 || ownRegular > 0) return { sale: ownSale, regular: ownRegular };
+
+  for (const child of Object.values(object)) {
+    const next = findLivePriceDeep(child);
+    if (next.sale > 0 || next.regular > 0) return next;
+  }
+
+  return { sale: 0, regular: 0 };
+}
+
+function liveSalePrice(live: Record<string, unknown>) {
+  const found = findLivePriceDeep(live);
+  return found.sale || found.regular;
 }
 
 async function getLivePrice(productId: string) {
@@ -358,8 +405,11 @@ async function getLivePrice(productId: string) {
 }
 
 async function fillMissingLivePrices(products: Product[]) {
-  const missing = products.filter((product) => cleanPrice(product.priceJod) <= 0).slice(0, 24);
-  const prices = await Promise.all(missing.map((product) => getLivePrice(String(product.id))));
+  const missing = products.filter((product) => cleanPrice(product.priceJod) <= 0).slice(0, 120);
+  const prices: number[] = [];
+  for (let index = 0; index < missing.length; index += 12) {
+    prices.push(...await Promise.all(missing.slice(index, index + 12).map((product) => getLivePrice(String(product.id)))));
+  }
   const byId = new Map(missing.map((product, index) => [String(product.id), prices[index]]));
   return products.map((product) => {
     const price = byId.get(String(product.id)) ?? 0;
@@ -373,14 +423,14 @@ function bestSubCategory(product: Product) {
 
   const main = clean(product.mainCategory);
   const categories = (product.allCategories ?? []).map(clean).filter(Boolean);
-  return categories.find((category) => !main || !labelMatches(category, main)) ?? "";
+  return categories.find((category) => !main || !exactLabelMatches(category, main)) ?? "";
 }
 
 function productSubCategoryLabels(product: Product) {
   const main = clean(product.mainCategory);
   return [bestSubCategory(product), ...(product.allCategories ?? [])]
     .map(clean)
-    .filter((label) => label && (!main || !labelMatches(label, main)));
+    .filter((label) => label && (!main || !exactLabelMatches(label, main)));
 }
 
 function productCategoryLabels(product: Product) {
@@ -434,36 +484,13 @@ function productMatchesLabel(product: Product, label: string) {
 
 function productMatchesMainCategory(product: Product, category: string) {
   if (!category) return true;
-  return [product.mainCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, category));
+  return [product.mainCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => exactLabelMatches(label, category));
 }
 
 function productMatchesSubCategory(product: Product, subCategory: string) {
   if (!subCategory) return true;
   const labels = productSubCategoryLabels(product);
-  if (labels.some((label) => labelMatches(label, subCategory))) return true;
-  return labels.length === 0 && productTextMatchesSubFilter(product, subCategory);
-}
-
-function productTextMatchesSubFilter(product: Product, subCategory: string) {
-  const filter = clean(subCategory).toLowerCase();
-  const text = [product.englishName, product.arabicName].map(clean).join(" ").toLowerCase();
-  if (!filter || !text) return false;
-
-  const keywordRules = [
-    { filters: ["مراوح الشفط"], keywords: ["suction", "exhaust", "شفط"] },
-    { filters: ["صاعق الحشرات"], keywords: ["insect", "bug", "mosquito", "killer", "صاعق", "حشرات", "ناموس"] },
-    { filters: ["مكيفات الهواء"], keywords: ["air conditioner", "conditioner", "ac ", "split", "مكيف", "مكيفات"] },
-    { filters: ["المراوح", "مروحة"], keywords: ["fan", "مروحة", "مراوح"] },
-  ];
-
-  const comparableFilter = comparableLabel(filter);
-  const rule = keywordRules.find((item) =>
-    item.filters.some((itemFilter) => comparableLabel(itemFilter) === comparableFilter)
-  );
-  if (rule) return rule.keywords.some((keyword) => text.includes(keyword));
-
-  const tokens = labelTokens(filter).filter((token) => token.length >= 4);
-  return tokens.length > 0 && tokens.every((token) => text.includes(token));
+  return labels.some((label) => exactLabelMatches(label, subCategory));
 }
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
