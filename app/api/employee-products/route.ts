@@ -299,8 +299,17 @@ function clean(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+function bestSubCategory(product: Product) {
+  const current = clean(product.subCategory);
+  if (current) return current;
+
+  const main = clean(product.mainCategory);
+  const categories = (product.allCategories ?? []).map(clean).filter(Boolean);
+  return categories.find((category) => !main || !labelMatches(category, main)) ?? "";
+}
+
 function productCategoryLabels(product: Product) {
-  return [product.mainCategory, product.subCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean);
+  return [product.mainCategory, bestSubCategory(product), ...(product.allCategories ?? [])].map(clean).filter(Boolean);
 }
 
 function comparableLabel(value: string) {
@@ -355,7 +364,7 @@ function productMatchesMainCategory(product: Product, category: string) {
 
 function productMatchesSubCategory(product: Product, subCategory: string) {
   if (!subCategory) return true;
-  return [product.subCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, subCategory));
+  return [bestSubCategory(product), ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, subCategory));
 }
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
@@ -392,7 +401,7 @@ function buildVisibleCategoryData(catalog: Catalog, products: Product[]) {
 
   for (const product of products) {
     const main = clean(product.mainCategory);
-    const sub = clean(product.subCategory);
+    const sub = bestSubCategory(product);
     if (main) {
       categorySet.add(main);
       tree[main] ??= new Set<string>();
@@ -444,6 +453,10 @@ export async function GET(request: NextRequest) {
           return matchesCategory && matchesSub && (!q || searchText.includes(q));
         })
       : statusProducts;
+    const responseProducts = filtered.slice(0, limit).map((product) => ({
+      ...product,
+      subCategory: bestSubCategory(product),
+    }));
 
     return NextResponse.json({
       fetchedAt: catalog.fetchedAt ?? new Date().toISOString(),
@@ -455,7 +468,7 @@ export async function GET(request: NextRequest) {
       ...visibleCategories,
       subCategories: category ? visibleCategories.categoryTree[category] ?? [] : [],
       totalFiltered: filtered.length,
-      products: filtered.slice(0, limit),
+      products: responseProducts,
     });
   } catch {
     return NextResponse.json({
