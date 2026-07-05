@@ -1,6 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { Buffer } from "node:buffer";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import type { ReadyProduct } from "@/lib/ready-products";
 
 export type LiveProductData = {
@@ -66,6 +67,44 @@ const monthlyBestOfferFilters: OfferFilterGroup[] = [
   { label: "Tea & Coffee", targets: ["\u0627\u0644\u0634\u0627\u064a \u0648\u0627\u0644\u0642\u0647\u0648\u0629"] }
 ];
 
+export function starterLiveProductData(): LiveProductData {
+  return {
+    fetchedAt: "2026-07-04T00:00:00.000Z",
+    source: "Starter deploy catalog",
+    categoryCount: 1,
+    uniqueProductCount: 1,
+    inStock: 1,
+    outOfStock: 0,
+    products: [
+      {
+        id: "starter-product",
+        englishName: "Starter product",
+        arabicName: "\u0645\u0646\u062a\u062c \u062a\u062c\u0631\u064a\u0628\u064a",
+        priceJod: 0,
+        imageUrl: "/placeholder.svg",
+        brand: "Yaser Mall",
+        mainCategory: "Starter",
+        subCategory: "Starter",
+        sourceStock: "IN_STOCK",
+        productUrl: "https://yasermallonline.com/en/home",
+        allCategories: ["Starter"]
+      }
+    ]
+  };
+}
+
+export function starterLiveProductsPage(): LiveProductsPage {
+  const data = starterLiveProductData();
+  return {
+    ...data,
+    categories: ["Starter"],
+    subCategories: ["Starter"],
+    categoryTree: { Starter: ["Starter"] },
+    categoryImages: { Starter: "/placeholder.svg" },
+    totalFiltered: data.products.length
+  };
+}
+
 async function getFastCatalog() {
   const file = path.join(process.cwd(), "data", "fast-catalog.json");
   try {
@@ -80,25 +119,35 @@ async function getFastCatalog() {
     const products = data.products.slice(0, 300);
     const categories = Array.from(new Set(data.products.map((product) => product.mainCategory).filter(Boolean))).sort();
     const categoryTree = Object.fromEntries(categories.map((category) => [category, []])) as Record<string, string[]>;
-    const categoryImages = Object.fromEntries(
-      data.products
-        .filter((product) => product.mainCategory && product.imageUrl)
-        .map((product) => [product.mainCategory, product.imageUrl])
-    ) as Record<string, string>;
+    const categoryImages = Object.fromEntries(data.products.filter((product) => product.mainCategory && product.imageUrl).map((product) => [product.mainCategory, product.imageUrl])) as Record<string, string>;
     return { ...data, categories, categoryTree, categoryImages, products };
   }
 }
 
 async function readLiveProductFile(file: string) {
+  try {
+    const compressedFile = path.join(process.cwd(), "data", "yaser-live-products.full.json.gz.b64");
+    const compressed = (await readFile(compressedFile, "utf8")).trim();
+    const compressedData = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as LiveProductData;
+    if (Array.isArray(compressedData.products) && compressedData.products.length > 100) return compressedData;
+  } catch {
+    // Fall back to the public catalog file.
+  }
+
   const data = JSON.parse(await readFile(file, "utf8")) as LiveProductData & { productParts?: string[] };
   if (!Array.isArray(data.products) && Array.isArray(data.productParts)) {
-    const products = [];
+    const products: ReadyProduct[] = [];
     for (const part of data.productParts) {
       const partFile = path.join(path.dirname(file), part);
-      products.push(...JSON.parse(await readFile(partFile, "utf8")) as ReadyProduct[]);
+      try {
+        products.push(...JSON.parse(await readFile(partFile, "utf8")) as ReadyProduct[]);
+      } catch {
+        // Keep the deployed app online even if one uploaded catalog part is missing.
+      }
     }
     data.products = products;
   }
+  if (!Array.isArray(data.products) || data.products.length === 0) return starterLiveProductData();
   return data as LiveProductData;
 }
 
@@ -119,12 +168,20 @@ async function getCategoryMap() {
 
 export async function getLiveProductData(options: { forceFresh?: boolean } = {}) {
   const file = path.join(process.cwd(), "public", "yaser-live-products.txt");
-  const fileStat = await stat(file);
-  const mtime = fileStat.mtimeMs;
-  if (cachedData && cachedDataMtime === mtime) return cachedData;
-  const data = await readLiveProductFile(file);
-  cachedData = data;
-  cachedDataMtime = mtime;
+  const compressedFile = path.join(process.cwd(), "data", "yaser-live-products.full.json.gz.b64");
+  try {
+    const [fileStat, compressedStat] = await Promise.all([
+      stat(file).catch(() => undefined),
+      stat(compressedFile).catch(() => undefined)
+    ]);
+    const mtime = (fileStat?.mtimeMs ?? 0) + (compressedStat?.mtimeMs ?? 0);
+    if (cachedData && cachedDataMtime === mtime) return cachedData;
+    cachedData = await readLiveProductFile(file);
+    cachedDataMtime = mtime;
+  } catch {
+    cachedData = starterLiveProductData();
+    cachedDataMtime = 0;
+  }
   cachedIndex = null;
   return cachedData;
 }
