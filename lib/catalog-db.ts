@@ -25,6 +25,14 @@ function cleanPrice(value: unknown) {
   return Number.isFinite(number) && number > 0 ? Number(number.toFixed(2)) : 0;
 }
 
+function bestSubCategory(product: ReadyProduct, mainCategory: string) {
+  const current = cleanText(product.subCategory);
+  if (current) return current;
+  return (product.allCategories ?? [])
+    .map(cleanText)
+    .find((category) => category && category !== mainCategory) ?? "";
+}
+
 async function readOptionalCatalogFile(file: string) {
   try {
     return parseJson<CatalogFile>(await readFile(file, "utf8"));
@@ -93,7 +101,7 @@ function dbRow(product: ReadyProduct, syncedAt: Date) {
   const englishName = cleanText(product.englishName || product.arabicName || "Yaser Mall product");
   const arabicName = cleanText(product.arabicName || englishName);
   const mainCategory = cleanText(product.mainCategory || "Yaser Mall");
-  const subCategory = cleanText(product.subCategory || "");
+  const subCategory = bestSubCategory(product, mainCategory);
   const productUrl = cleanText(product.productUrl || `https://yasermallonline.com/en/product/${sourceProductId}`);
   const allCategories = Array.from(new Set([...(product.allCategories ?? []), mainCategory, subCategory].map(cleanText).filter(Boolean)));
 
