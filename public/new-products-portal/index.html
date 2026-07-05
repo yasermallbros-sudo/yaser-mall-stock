@@ -190,7 +190,7 @@
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
-      min-width: 1220px;
+      min-width: 1120px;
       border-collapse: collapse;
     }
     th, td {
@@ -222,6 +222,14 @@
       font-size: 12px;
       font-weight: 800;
     }
+    .arabic-name {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      text-align: left;
+    }
 
     .status {
       display: inline-flex;
@@ -234,20 +242,6 @@
     }
     .status.enabled { background: #e8f6ee; color: var(--green); }
     .status.disabled { background: #fdecec; color: var(--red); }
-    .review-pill {
-      display: inline-flex;
-      justify-content: center;
-      min-width: 76px;
-      border-radius: 999px;
-      padding: 5px 9px;
-      background: var(--soft);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    .review-pill.yes { background: #e8f6ee; color: var(--green); }
-    .review-pill.no { background: #fdecec; color: var(--red); }
 
     .review-actions {
       display: grid;
@@ -365,7 +359,7 @@
     </section>
 
     <section class="controls" aria-label="Product filters">
-      <label class="search"><span>Search</span><input id="query" placeholder="Name, barcode, product ID"></label>
+      <label class="search"><span>Search</span><input id="query" placeholder="Arabic, English, barcode, product ID"></label>
       <label><span>Status</span><select id="statusFilter"><option value="all">all</option><option>Enabled</option><option>Disabled</option></select></label>
       <label><span>Stock</span><select id="stockFilter"><option value="all">all</option><option value="in">in</option><option value="zero">zero</option><option value="large">large</option></select></label>
       <label><span>Review</span><select id="reviewFilter"><option value="all">all</option><option value="pending">pending</option><option value="yes">yes</option><option value="no">no</option></select></label>
@@ -413,11 +407,12 @@
     const qty = (value) => numberValue(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
     const money = (value) => String(value).split(" ").filter(Boolean).map((part) => Number(part).toFixed(3)).join(" -> ");
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    const productName = (product) => product.name_en || product.name || "";
 
     function filteredProducts() {
       const needle = state.query.trim().toLowerCase();
       return state.products.filter((product) => {
-        const searchable = `${product.product_id} ${product.name} ${product.barcode}`.toLowerCase();
+        const searchable = `${product.product_id} ${productName(product)} ${product.name_ar || ""} ${product.barcode || ""}`.toLowerCase();
         const review = state.reviews[product.product_id];
         const quantity = numberValue(product.quantity);
         if (needle && !searchable.includes(needle)) return false;
@@ -430,7 +425,7 @@
         if (state.review === "no" && review !== "no") return false;
         return true;
       }).sort((a, b) => {
-        if (state.sort === "name") return a.name.localeCompare(b.name);
+        if (state.sort === "name") return productName(a).localeCompare(productName(b));
         if (state.sort === "quantity") return numberValue(b.quantity) - numberValue(a.quantity);
         if (state.sort === "price") return numberValue(b.price) - numberValue(a.price);
         return b.date_added.localeCompare(a.date_added);
@@ -444,11 +439,6 @@
     function mark(productId, value) {
       state.reviews[productId] = value;
       saveReviews();
-      state.page = 1;
-      if (state.role === "employee") {
-        state.review = "pending";
-        el("reviewFilter").value = "pending";
-      }
       render();
     }
 
@@ -483,32 +473,24 @@
       return `<span class="status ${product.status === "Enabled" ? "enabled" : "disabled"}">${esc(product.status)}</span>`;
     }
 
-    function reviewPill(product) {
-      const value = state.reviews[product.product_id];
-      if (value === "yes") return '<span class="review-pill yes">Yes</span>';
-      if (value === "no") return '<span class="review-pill no">No</span>';
-      return '<span class="review-pill">Pending</span>';
-    }
-
     function renderAdmin(rows) {
       el("content").innerHTML = `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Review</th><th>Action</th>
+                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
               ${rows.map((product) => `
                 <tr>
-                  <td><span class="product-id">#${esc(product.product_id)}</span><strong>${esc(product.name || "no name")}</strong></td>
+                  <td><span class="product-id">#${esc(product.product_id)}</span><strong>${esc(productName(product) || "no name")}</strong>${product.name_ar ? `<span class="arabic-name" dir="rtl">${esc(product.name_ar)}</span>` : ""}</td>
                   <td>${esc(product.barcode)}</td>
                   <td>${esc(money(product.price))} JD</td>
                   <td>${esc(qty(product.quantity))}</td>
                   <td>${statusPill(product)}</td>
                   <td>${esc(product.date_added)}</td>
-                  <td>${reviewPill(product)}</td>
                   <td>${reviewButtons(product)}</td>
                 </tr>
               `).join("")}
@@ -525,7 +507,8 @@
             <article class="employee-item">
               <div class="product-main">
                 <span class="product-id">#${esc(product.product_id)}</span>
-                <h3>${esc(product.name || "no name")}</h3>
+                <h3>${esc(productName(product) || "no name")}</h3>
+                ${product.name_ar ? `<p class="arabic-name" dir="rtl">${esc(product.name_ar)}</p>` : ""}
                 <p>${esc(product.barcode)}</p>
               </div>
               <div class="facts">
@@ -542,12 +525,12 @@
     }
 
     function exportCsv(rows) {
-      const headers = ["Product ID", "Name", "Barcode", "Price", "Status", "Quantity", "Date Added"];
+      const headers = ["Product ID", "English Name", "Arabic Name", "Barcode", "Price", "Status", "Quantity", "Date Added"];
       const quote = (value) => {
         const text = String(value ?? "");
         return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
       };
-      const csv = [headers.join(","), ...rows.map((row) => [row.product_id, row.name, row.barcode, row.price, row.status, row.quantity, row.date_added].map(quote).join(","))].join("\n");
+      const csv = [headers.join(","), ...rows.map((row) => [row.product_id, productName(row), row.name_ar, row.barcode, row.price, row.status, row.quantity, row.date_added].map(quote).join(","))].join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -587,20 +570,8 @@
       });
     });
 
-    el("adminRole").addEventListener("click", () => {
-      state.role = "admin";
-      state.review = "all";
-      state.page = 1;
-      el("reviewFilter").value = "all";
-      render();
-    });
-    el("employeeRole").addEventListener("click", () => {
-      state.role = "employee";
-      state.review = "pending";
-      state.page = 1;
-      el("reviewFilter").value = "pending";
-      render();
-    });
+    el("adminRole").addEventListener("click", () => { state.role = "admin"; render(); });
+    el("employeeRole").addEventListener("click", () => { state.role = "employee"; render(); });
     el("prevPage").addEventListener("click", () => { state.page = Math.max(1, state.page - 1); render(); });
     el("nextPage").addEventListener("click", () => { state.page += 1; render(); });
     el("resetReviews").addEventListener("click", () => { state.reviews = {}; saveReviews(); render(); });
