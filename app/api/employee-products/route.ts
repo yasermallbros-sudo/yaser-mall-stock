@@ -238,7 +238,8 @@ async function readCatalog() {
   if (cachedCatalog && cachedCatalogKey === nextCacheKey) return cachedCatalog;
 
   try {
-    const full = await readDatabaseCatalog() ?? await readFullLiveCatalog();
+    const full = await readFullLiveCatalog().catch(async () => await readDatabaseCatalog());
+    if (!full) throw new Error("No full catalog is available.");
     const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
     const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
     cachedCatalog = {
