@@ -19,6 +19,21 @@ services:
         value: "1200"
       - key: LIVE_SYNC_MAX_PRODUCTS
         value: "1200"
+      - key: CRON_SECRET
+        value: yaser-mall-nightly-sync-2026
+
+  - type: cron
+    name: yaser-mall-stock-nightly-sync
+    runtime: node
+    plan: starter
+    schedule: "0 21 * * *"
+    buildCommand: npm ci
+    startCommand: node scripts/nightly-sync.mjs
+    envVars:
+      - key: APP_URL
+        value: https://yaser-mall-stock.onrender.com
+      - key: CRON_SECRET
+        value: yaser-mall-nightly-sync-2026
 
 databases:
   - name: yaser-mall-stock-db
