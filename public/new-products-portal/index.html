@@ -394,8 +394,8 @@
         </div>
       </div>
       <div class="role-switch" aria-label="Portal role">
-        <button id="adminRole" class="active" type="button">Admin</button>
-        <button id="employeeRole" type="button">Employee</button>
+        <button id="adminRole" type="button">Admin</button>
+        <button id="employeeRole" class="active" type="button">Employee</button>
       </div>
     </header>
 
@@ -416,7 +416,7 @@
     <section class="data">
       <div class="section-head">
         <div>
-          <p id="workspaceName">Admin workspace</p>
+          <p id="workspaceName">Employee workspace</p>
           <h2><span id="shownCount">0</span> products shown</h2>
         </div>
         <div id="adminActions" class="actions">
@@ -442,7 +442,7 @@
     const JORDAN_TIME_ZONE = "Asia/Amman";
     const state = {
       products: [],
-      role: "admin",
+      role: "employee",
       page: 1,
       query: "",
       status: "all",
