@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 type ViewMode = "NOT_CHECKED" | "IN_REPORT" | "OUT_REPORT" | "CHECKED";
+type SourceStatus = "ALL" | "IN_STOCK" | "OUT_OF_STOCK";
 const PAGE_SIZE = 60;
 
 function cleanDate(value: string) {
@@ -43,31 +44,33 @@ function reportSearchText(record: AuditRecord) {
   ].map(clean).join(" ").toLowerCase();
 }
 
-function reportMatchesFilters(record: AuditRecord, query: string, category: string, subCategory: string) {
+function reportMatchesFilters(record: AuditRecord, query: string, category: string, subCategory: string, stockStatus: SourceStatus) {
   const product = record.product;
   const labels = [product.mainCategory, product.subCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean);
   const matchesQuery = !query || reportSearchText(record).includes(query.toLowerCase());
   const matchesCategory = !category || labels.includes(category);
   const matchesSubCategory = !subCategory || labels.includes(subCategory);
-  return matchesQuery && matchesCategory && matchesSubCategory;
+  const matchesStock = stockStatus === "ALL" || product.sourceStock === stockStatus;
+  return matchesQuery && matchesCategory && matchesSubCategory && matchesStock;
 }
 
-function adminHref(options: { view: ViewMode; query: string; category?: string; subCategory?: string; limit: number }) {
+function adminHref(options: { view: ViewMode; query: string; category?: string; subCategory?: string; stockStatus: SourceStatus; limit: number }) {
   const params = new URLSearchParams();
   if (options.query) params.set("q", options.query);
   if (options.category) params.set("category", options.category);
   if (options.subCategory) params.set("subCategory", options.subCategory);
+  if (options.stockStatus !== "ALL") params.set("stock", options.stockStatus);
   if (options.view !== "NOT_CHECKED") params.set("view", options.view);
   params.set("limit", String(options.limit));
   return "/admin/items?" + params.toString();
 }
 
-function moreHref(query: string, category: string, subCategory: string, limit: number, view: ViewMode) {
-  return adminHref({ view, query, category, subCategory, limit: limit + PAGE_SIZE });
+function moreHref(query: string, category: string, subCategory: string, stockStatus: SourceStatus, limit: number, view: ViewMode) {
+  return adminHref({ view, query, category, subCategory, stockStatus, limit: limit + PAGE_SIZE });
 }
 
-function viewHref(view: ViewMode, query: string, category: string, subCategory: string, limit: number) {
-  return adminHref({ view, query, category, subCategory, limit });
+function viewHref(view: ViewMode, query: string, category: string, subCategory: string, stockStatus: SourceStatus, limit: number) {
+  return adminHref({ view, query, category, subCategory, stockStatus, limit });
 }
 
 function ProductSummary({ product }: { product: ReadyProduct }) {
@@ -78,13 +81,14 @@ function ReportCard({ record }: { record: AuditRecord }) {
   return <article className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-[96px_1fr_auto]"><ProductSummary product={record.product} /><div className="space-y-2 sm:text-right"><p className="text-lg font-bold text-primary">{formatJod(record.product.priceJod)}</p><span className={"inline-flex rounded-full px-3 py-1 text-xs font-semibold " + (record.status === "OUT_OF_STOCK" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary")}>{record.status === "OUT_OF_STOCK" ? "Employee: Out Stock" : "Employee: In Stock"}</span><p className="text-xs text-muted-foreground">Checked {cleanDate(record.checkedAt)}</p><p className="text-xs text-muted-foreground">Hidden until {cleanDate(record.hideUntil)}</p><span className={"inline-flex rounded-full px-3 py-1 text-xs font-semibold " + (record.adminReviewedAt ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>{record.adminReviewedAt ? "Admin reviewed" : "Admin not checked"}</span><div className="grid gap-2 pt-2"><form action="/admin/items/review" method="post"><input type="hidden" name="productId" value={record.productId} /><input type="hidden" name="action" value={record.adminReviewedAt ? "unreview" : "review"} /><Button type="submit" size="sm" className="w-full"><CheckCircle2 className="h-4 w-4" />{record.adminReviewedAt ? "Undo review" : "Mark checked"}</Button></form><form action="/admin/items/review" method="post"><input type="hidden" name="productId" value={record.productId} /><input type="hidden" name="action" value="restore" /><Button type="submit" size="sm" variant="outline" className="w-full">Return to check list</Button></form></div></div></article>;
 }
 
-export function AdminReadyPlan({ initialData, auditRecords, initialQuery, currentLimit, view, refreshedAt, initialCategory, initialSubCategory }: { initialData: LiveProductsPage; auditRecords: AuditMap; initialQuery: string; currentLimit: number; view: ViewMode; refreshedAt: string; initialCategory?: string; initialSubCategory?: string }) {
+export function AdminReadyPlan({ initialData, auditRecords, initialQuery, currentLimit, view, refreshedAt, initialCategory, initialSubCategory, initialStockStatus }: { initialData: LiveProductsPage; auditRecords: AuditMap; initialQuery: string; currentLimit: number; view: ViewMode; refreshedAt: string; initialCategory?: string; initialSubCategory?: string; initialStockStatus?: SourceStatus }) {
   const selectedCategory = clean(initialCategory);
   const selectedSubCategory = clean(initialSubCategory);
+  const selectedStockStatus = initialStockStatus ?? "ALL";
   const categories = Object.keys(initialData.categoryTree ?? {}).sort();
   const subCategories = selectedCategory ? initialData.categoryTree[selectedCategory] ?? [] : [];
   const reportRecords = Object.values(auditRecords)
-    .filter((record) => reportMatchesFilters(record, initialQuery, selectedCategory, selectedSubCategory))
+    .filter((record) => reportMatchesFilters(record, initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus))
     .sort((a, b) => new Date(b.checkedAt).getTime() - new Date(a.checkedAt).getTime());
   const allReportRecords = Object.values(auditRecords);
   const checkedReports = reportRecords.filter((record) => record.adminReviewedAt);
@@ -100,8 +104,13 @@ export function AdminReadyPlan({ initialData, auditRecords, initialQuery, curren
       <form action="/admin/items" className="rounded-xl border bg-card p-4">
         <input type="hidden" name="view" value={view === "NOT_CHECKED" ? "" : view} />
         <input type="hidden" name="limit" value={currentLimit} />
-        <div className="grid gap-2 lg:grid-cols-[1.2fr_1fr_1fr_auto_auto]">
+        <div className="grid gap-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
           <div className="relative"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input name="q" defaultValue={initialQuery} className="h-11 rounded-xl pl-9" placeholder="Search product, ID, category" /></div>
+          <select name="stock" defaultValue={selectedStockStatus} className="h-11 rounded-xl border bg-background px-3 text-sm">
+            <option value="ALL">All Yaser stock</option>
+            <option value="IN_STOCK">Yaser in stock</option>
+            <option value="OUT_OF_STOCK">Yaser out of stock</option>
+          </select>
           <select name="category" defaultValue={selectedCategory} className="h-11 rounded-xl border bg-background px-3 text-sm">
             <option value="">All main categories</option>
             {categories.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -111,14 +120,14 @@ export function AdminReadyPlan({ initialData, auditRecords, initialQuery, curren
             {subCategories.map((subCategory) => <option key={subCategory} value={subCategory}>{subCategory}</option>)}
           </select>
           <Button type="submit" className="h-11 rounded-xl">Filter</Button>
-          <Button asChild type="button" variant="outline" className="h-11 rounded-xl"><Link href={viewHref(view, "", "", "", currentLimit)}>Clear</Link></Button>
+          <Button asChild type="button" variant="outline" className="h-11 rounded-xl"><Link href={viewHref(view, "", "", "", "ALL", currentLimit)}>Clear</Link></Button>
         </div>
       </form>
-      <section className="sticky top-[57px] z-10 grid gap-2 border-b bg-background/95 py-3 backdrop-blur sm:grid-cols-4"><Button asChild variant={view === "NOT_CHECKED" ? "default" : "outline"} className="h-11"><Link href={viewHref("NOT_CHECKED", initialQuery, selectedCategory, selectedSubCategory, currentLimit)}><ClipboardList className="h-4 w-4" />Not checked</Link></Button><Button asChild variant={view === "IN_REPORT" ? "default" : "outline"} className="h-11"><Link href={viewHref("IN_REPORT", initialQuery, selectedCategory, selectedSubCategory, currentLimit)}><PackageCheck className="h-4 w-4" />In stock report</Link></Button><Button asChild variant={view === "OUT_REPORT" ? "default" : "outline"} className="h-11"><Link href={viewHref("OUT_REPORT", initialQuery, selectedCategory, selectedSubCategory, currentLimit)}><PackageX className="h-4 w-4" />Out stock report</Link></Button><Button asChild variant={view === "CHECKED" ? "default" : "outline"} className="h-11"><Link href={viewHref("CHECKED", initialQuery, selectedCategory, selectedSubCategory, currentLimit)}><ShieldCheck className="h-4 w-4" />Checked items</Link></Button></section>
+      <section className="sticky top-[57px] z-10 grid gap-2 border-b bg-background/95 py-3 backdrop-blur sm:grid-cols-4"><Button asChild variant={view === "NOT_CHECKED" ? "default" : "outline"} className="h-11"><Link href={viewHref("NOT_CHECKED", initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus, currentLimit)}><ClipboardList className="h-4 w-4" />Not checked</Link></Button><Button asChild variant={view === "IN_REPORT" ? "default" : "outline"} className="h-11"><Link href={viewHref("IN_REPORT", initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus, currentLimit)}><PackageCheck className="h-4 w-4" />In stock report</Link></Button><Button asChild variant={view === "OUT_REPORT" ? "default" : "outline"} className="h-11"><Link href={viewHref("OUT_REPORT", initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus, currentLimit)}><PackageX className="h-4 w-4" />Out stock report</Link></Button><Button asChild variant={view === "CHECKED" ? "default" : "outline"} className="h-11"><Link href={viewHref("CHECKED", initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus, currentLimit)}><ShieldCheck className="h-4 w-4" />Checked items</Link></Button></section>
       {view === "IN_REPORT" && <section className="grid gap-3"><details className="rounded-xl border bg-card p-4" open><summary className="cursor-pointer text-sm font-semibold text-primary">In Stock Checked Report ({inReports.length.toLocaleString()})</summary><div className="mt-4 grid gap-3">{inReports.map((record) => <ReportCard key={record.productId} record={record} />)}{inReports.length === 0 && <div className="rounded-xl border bg-background p-4 text-center text-sm text-muted-foreground">No in-stock reports waiting for admin check.</div>}</div></details></section>}
       {view === "OUT_REPORT" && <section className="grid gap-3"><details className="rounded-xl border bg-card p-4" open><summary className="cursor-pointer text-sm font-semibold text-destructive">Out of Stock Checked Report ({outReports.length.toLocaleString()})</summary><div className="mt-4 grid gap-3">{outReports.map((record) => <ReportCard key={record.productId} record={record} />)}{outReports.length === 0 && <div className="rounded-xl border bg-background p-4 text-center text-sm text-muted-foreground">No out-of-stock reports waiting for admin check.</div>}</div></details></section>}
       {view === "CHECKED" && <section className="grid gap-3"><details className="rounded-xl border bg-card p-4" open><summary className="cursor-pointer text-sm font-semibold text-primary">Checked Items Report ({checkedReports.length.toLocaleString()})</summary><div className="mt-4 grid gap-3">{checkedReports.map((record) => <ReportCard key={record.productId} record={record} />)}{checkedReports.length === 0 && <div className="rounded-xl border bg-background p-4 text-center text-sm text-muted-foreground">No admin-checked items yet.</div>}</div></details></section>}
-      {view === "NOT_CHECKED" && <section className="grid gap-3">{notCheckedProducts.map((product) => <article key={product.id} className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-[96px_1fr_auto]"><ProductSummary product={product} /><div className="space-y-2 sm:text-right"><p className="text-lg font-bold text-primary">{formatJod(product.priceJod)}</p><span className={"inline-flex rounded-full px-3 py-1 text-xs font-semibold " + statusClass(product.sourceStock)}>{sourceLabel(product.sourceStock)}</span><p className="text-xs text-muted-foreground">Not checked by employee</p></div></article>)}{initialData.products.length < initialData.totalFiltered && <Button asChild type="button" variant="outline" className="h-12 w-full rounded-xl"><Link href={moreHref(initialQuery, selectedCategory, selectedSubCategory, currentLimit, view)}>Load more ({initialData.products.length.toLocaleString()} / {initialData.totalFiltered.toLocaleString()})</Link></Button>}</section>}
+      {view === "NOT_CHECKED" && <section className="grid gap-3">{notCheckedProducts.map((product) => <article key={product.id} className="grid gap-4 rounded-xl border bg-card p-4 sm:grid-cols-[96px_1fr_auto]"><ProductSummary product={product} /><div className="space-y-2 sm:text-right"><p className="text-lg font-bold text-primary">{formatJod(product.priceJod)}</p><span className={"inline-flex rounded-full px-3 py-1 text-xs font-semibold " + statusClass(product.sourceStock)}>{sourceLabel(product.sourceStock)}</span><p className="text-xs text-muted-foreground">Not checked by employee</p></div></article>)}{initialData.products.length < initialData.totalFiltered && <Button asChild type="button" variant="outline" className="h-12 w-full rounded-xl"><Link href={moreHref(initialQuery, selectedCategory, selectedSubCategory, selectedStockStatus, currentLimit, view)}>Load more ({initialData.products.length.toLocaleString()} / {initialData.totalFiltered.toLocaleString()})</Link></Button>}</section>}
     </div>
   </main>;
 }
