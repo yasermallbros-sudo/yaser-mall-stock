@@ -30,7 +30,7 @@ export async function readAuditMap(): Promise<AuditMap> {
     let changed = false;
 
     for (const [productId, record] of Object.entries(records)) {
-      if (new Date(record.hideUntil).getTime() <= now) {
+      if (record.adminReviewedAt && new Date(record.hideUntil).getTime() <= now) {
         delete records[productId];
         changed = true;
       }
@@ -65,7 +65,10 @@ export async function setAdminReviewed(productId: string, reviewed: boolean) {
   const records = await readAuditMap();
   const record = records[productId];
   if (!record) return;
-  records[productId] = { ...record, adminReviewedAt: reviewed ? new Date().toISOString() : undefined };
+  const now = new Date();
+  records[productId] = reviewed
+    ? { ...record, adminReviewedAt: now.toISOString(), hideUntil: hideUntilFrom(now) }
+    : { ...record, adminReviewedAt: undefined };
   await writeAuditMap(records);
 }
 
