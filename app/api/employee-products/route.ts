@@ -298,6 +298,147 @@ async function readDatabaseCatalog(): Promise<Catalog | undefined> {
   } satisfies Catalog;
 }
 
+function productFromDatabaseRow(row: {
+  id: string;
+  sourceProductId: string | null;
+  englishName: string;
+  arabicName: string | null;
+  price: unknown;
+  imageUrl: string | null;
+  brand: string | null;
+  mainCategory: string | null;
+  subCategory: string | null;
+  sourceStock: string;
+  quantity: unknown;
+  allCategories: unknown;
+  productUrl: string;
+}) {
+  const mainCategory = clean(row.mainCategory);
+  return {
+    id: row.sourceProductId || row.id,
+    englishName: row.englishName,
+    arabicName: row.arabicName,
+    priceJod: Number(row.price ?? 0),
+    imageUrl: row.imageUrl || "/placeholder.svg",
+    brand: row.brand || "Yaser Mall",
+    mainCategory,
+    subCategory: clean(row.subCategory),
+    sourceStock: row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK",
+    quantity: row.quantity === null ? null : Number(row.quantity),
+    allCategories: asStringArray(row.allCategories).length > 0 ? asStringArray(row.allCategories) : [mainCategory].filter(Boolean),
+    productUrl: row.productUrl,
+  } satisfies Product;
+}
+
+async function readCategoryMetadata() {
+  const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
+  const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
+  return {
+    categories: map?.categories ?? fast?.categories ?? [],
+    categoryTree: map?.categoryTree ?? fast?.categoryTree ?? {},
+    categoryImages: map?.categoryImages ?? fast?.categoryImages ?? {},
+  };
+}
+
+async function readHiddenProductIds() {
+  try {
+    const rows = await prisma.employeeAuditAction.findMany({
+      where: { hideUntil: { gt: new Date() } },
+      select: { productId: true },
+    });
+    return rows.map((row) => row.productId);
+  } catch {
+    const auditRecords = await readAuditMap();
+    return Object.entries(auditRecords)
+      .filter(([, record]) => isHiddenForAudit(record))
+      .map(([productId]) => productId);
+  }
+}
+
+async function readDatabaseProductsPage(options: { q: string; category: string; subCategory: string; status: "ALL" | "IN_STOCK" | "OUT_OF_STOCK"; limit: number }) {
+  const count = await prisma.product.count();
+  if (count < 100) return undefined;
+
+  const hiddenIds = await readHiddenProductIds();
+  const where: Record<string, unknown> = {};
+  if (hiddenIds.length > 0) where.id = { notIn: hiddenIds };
+  if (options.status !== "ALL") where.sourceStock = options.status;
+  if (options.category) {
+    where.OR = [
+      { mainCategory: options.category },
+      { category: options.category },
+    ];
+  }
+  if (options.subCategory) where.subCategory = options.subCategory;
+  if (options.q) {
+    const search = {
+      OR: [
+        { id: { contains: options.q, mode: "insensitive" } },
+        { sourceProductId: { contains: options.q, mode: "insensitive" } },
+        { englishName: { contains: options.q, mode: "insensitive" } },
+        { arabicName: { contains: options.q, mode: "insensitive" } },
+        { brand: { contains: options.q, mode: "insensitive" } },
+        { mainCategory: { contains: options.q, mode: "insensitive" } },
+        { subCategory: { contains: options.q, mode: "insensitive" } },
+      ],
+    };
+    if (where.OR) {
+      where.AND = [{ OR: where.OR }, search];
+      delete where.OR;
+    } else {
+      Object.assign(where, search);
+    }
+  }
+
+  const [rows, totalFiltered, latest, inStock, outOfStock, metadata] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy: [{ mainCategory: "asc" }, { subCategory: "asc" }, { englishName: "asc" }],
+      take: options.limit,
+      select: {
+        id: true,
+        sourceProductId: true,
+        englishName: true,
+        arabicName: true,
+        price: true,
+        imageUrl: true,
+        brand: true,
+        mainCategory: true,
+        subCategory: true,
+        sourceStock: true,
+        quantity: true,
+        allCategories: true,
+        productUrl: true,
+      },
+    }),
+    prisma.product.count({ where }),
+    prisma.product.findFirst({
+      where: { catalogSyncedAt: { not: null } },
+      orderBy: { catalogSyncedAt: "desc" },
+      select: { catalogSyncedAt: true },
+    }),
+    prisma.product.count({ where: { sourceStock: "IN_STOCK" } }),
+    prisma.product.count({ where: { sourceStock: "OUT_OF_STOCK" } }),
+    readCategoryMetadata(),
+  ]);
+
+  const products = await fillMissingLivePrices(rows.map(productFromDatabaseRow));
+  return {
+    fetchedAt: latest?.catalogSyncedAt?.toISOString() ?? new Date().toISOString(),
+    source: "Yaser Mall online cloud catalog",
+    categoryCount: metadata.categories.length,
+    uniqueProductCount: count,
+    inStock,
+    outOfStock,
+    categories: metadata.categories,
+    categoryTree: metadata.categoryTree,
+    categoryImages: metadata.categoryImages,
+    subCategories: options.category ? metadata.categoryTree[options.category] ?? [] : [],
+    totalFiltered,
+    products,
+  } satisfies Catalog & { totalFiltered: number };
+}
+
 async function readCatalog() {
   const nextCacheKey = await catalogCacheKey();
   if (cachedCatalog && cachedCatalogKey === nextCacheKey) return cachedCatalog;
@@ -645,6 +786,15 @@ export async function GET(request: NextRequest) {
     const subCategory = clean(params.get("subCategory"));
     const status = normalizeStock(params.get("status"));
     const limit = Math.min(5000, Math.max(1, Number(params.get("limit") ?? 120) || 120));
+
+    const databasePage = await readDatabaseProductsPage({ q, category, subCategory, status, limit }).catch(() => undefined);
+    if (databasePage) {
+      return NextResponse.json(databasePage, {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      });
+    }
 
     const catalog = await readCatalog();
     const products = Array.isArray(catalog.products) && catalog.products.length > 0 ? catalog.products : fallbackProducts;
