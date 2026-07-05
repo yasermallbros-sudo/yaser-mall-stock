@@ -94,6 +94,7 @@ async function catalogCacheKey() {
     path.join(root, "data", "yaser-category-map.json"),
     path.join(root, "data", "yaser-product-filter-map.json"),
     path.join(root, "data", "yaser-product-filter-map.json.gz.b64"),
+    path.join(root, "data", "yaser-live-products.full.json.gz.b64"),
   ];
   let dbKey = "db-missing";
   try {
@@ -113,6 +114,14 @@ async function catalogCacheKey() {
 }
 
 async function readFullLiveCatalog() {
+  try {
+    const compressed = (await readFile(path.join(process.cwd(), "data", "yaser-live-products.full.json.gz.b64"), "utf8")).trim();
+    const catalog = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as Catalog;
+    if (Array.isArray(catalog.products) && catalog.products.length > 100) return catalog;
+  } catch {
+    // Fall back to public product parts or the cloud database.
+  }
+
   const publicDir = path.join(process.cwd(), "public");
   const indexFile = path.join(publicDir, "yaser-live-products.txt");
   const index = await readJson<Catalog>(indexFile);
