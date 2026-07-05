@@ -190,7 +190,7 @@
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
-      min-width: 1120px;
+      min-width: 1220px;
       border-collapse: collapse;
     }
     th, td {
@@ -234,6 +234,20 @@
     }
     .status.enabled { background: #e8f6ee; color: var(--green); }
     .status.disabled { background: #fdecec; color: var(--red); }
+    .review-pill {
+      display: inline-flex;
+      justify-content: center;
+      min-width: 76px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .review-pill.yes { background: #e8f6ee; color: var(--green); }
+    .review-pill.no { background: #fdecec; color: var(--red); }
 
     .review-actions {
       display: grid;
@@ -430,6 +444,11 @@
     function mark(productId, value) {
       state.reviews[productId] = value;
       saveReviews();
+      state.page = 1;
+      if (state.role === "employee") {
+        state.review = "pending";
+        el("reviewFilter").value = "pending";
+      }
       render();
     }
 
@@ -464,13 +483,20 @@
       return `<span class="status ${product.status === "Enabled" ? "enabled" : "disabled"}">${esc(product.status)}</span>`;
     }
 
+    function reviewPill(product) {
+      const value = state.reviews[product.product_id];
+      if (value === "yes") return '<span class="review-pill yes">Yes</span>';
+      if (value === "no") return '<span class="review-pill no">No</span>';
+      return '<span class="review-pill">Pending</span>';
+    }
+
     function renderAdmin(rows) {
       el("content").innerHTML = `
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Action</th>
+                <th>Product</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Status</th><th>Date added</th><th>Review</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -482,6 +508,7 @@
                   <td>${esc(qty(product.quantity))}</td>
                   <td>${statusPill(product)}</td>
                   <td>${esc(product.date_added)}</td>
+                  <td>${reviewPill(product)}</td>
                   <td>${reviewButtons(product)}</td>
                 </tr>
               `).join("")}
@@ -560,8 +587,20 @@
       });
     });
 
-    el("adminRole").addEventListener("click", () => { state.role = "admin"; render(); });
-    el("employeeRole").addEventListener("click", () => { state.role = "employee"; render(); });
+    el("adminRole").addEventListener("click", () => {
+      state.role = "admin";
+      state.review = "all";
+      state.page = 1;
+      el("reviewFilter").value = "all";
+      render();
+    });
+    el("employeeRole").addEventListener("click", () => {
+      state.role = "employee";
+      state.review = "pending";
+      state.page = 1;
+      el("reviewFilter").value = "pending";
+      render();
+    });
     el("prevPage").addEventListener("click", () => { state.page = Math.max(1, state.page - 1); render(); });
     el("nextPage").addEventListener("click", () => { state.page += 1; render(); });
     el("resetReviews").addEventListener("click", () => { state.reviews = {}; saveReviews(); render(); });
