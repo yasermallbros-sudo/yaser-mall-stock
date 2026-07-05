@@ -376,8 +376,15 @@ function bestSubCategory(product: Product) {
   return categories.find((category) => !main || !labelMatches(category, main)) ?? "";
 }
 
+function productSubCategoryLabels(product: Product) {
+  const main = clean(product.mainCategory);
+  return [bestSubCategory(product), ...(product.allCategories ?? [])]
+    .map(clean)
+    .filter((label) => label && (!main || !labelMatches(label, main)));
+}
+
 function productCategoryLabels(product: Product) {
-  return [product.mainCategory, bestSubCategory(product), ...(product.allCategories ?? [])].map(clean).filter(Boolean);
+  return [product.mainCategory, ...productSubCategoryLabels(product)].map(clean).filter(Boolean);
 }
 
 function comparableLabel(value: string) {
@@ -432,7 +439,28 @@ function productMatchesMainCategory(product: Product, category: string) {
 
 function productMatchesSubCategory(product: Product, subCategory: string) {
   if (!subCategory) return true;
-  return [bestSubCategory(product), ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, subCategory));
+  const labels = productSubCategoryLabels(product);
+  if (labels.some((label) => labelMatches(label, subCategory))) return true;
+  return labels.length === 0 && productTextMatchesSubFilter(product, subCategory);
+}
+
+function productTextMatchesSubFilter(product: Product, subCategory: string) {
+  const filter = clean(subCategory).toLowerCase();
+  const text = [product.englishName, product.arabicName].map(clean).join(" ").toLowerCase();
+  if (!filter || !text) return false;
+
+  const keywordRules = [
+    { filters: ["المراوح", "مروحة"], keywords: ["fan", "مروحة", "مراوح"] },
+    { filters: ["مراوح الشفط"], keywords: ["suction", "exhaust", "شفط"] },
+    { filters: ["صاعق الحشرات"], keywords: ["insect", "bug", "mosquito", "killer", "صاعق", "حشرات", "ناموس"] },
+    { filters: ["مكيفات الهواء"], keywords: ["air conditioner", "conditioner", "ac ", "split", "مكيف", "مكيفات"] },
+  ];
+
+  const rule = keywordRules.find((item) => item.filters.some((itemFilter) => labelMatches(itemFilter, filter)));
+  if (rule) return rule.keywords.some((keyword) => text.includes(keyword));
+
+  const tokens = labelTokens(filter).filter((token) => token.length >= 4);
+  return tokens.length > 0 && tokens.every((token) => text.includes(token));
 }
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
