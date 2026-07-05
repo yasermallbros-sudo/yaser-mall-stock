@@ -347,16 +347,6 @@ async function readCategoryMetadata() {
   ]);
   const categorySet = new Set<string>((map?.categories ?? fast?.categories ?? []).map(clean).filter(Boolean));
   const categoryTree: Record<string, Set<string>> = {};
-  for (const [main, subs] of Object.entries(map?.categoryTree ?? fast?.categoryTree ?? {})) {
-    const cleanMain = clean(main);
-    if (!cleanMain) continue;
-    categorySet.add(cleanMain);
-    categoryTree[cleanMain] ??= new Set<string>();
-    for (const sub of subs ?? []) {
-      const cleanSub = clean(sub);
-      if (cleanSub && !exactLabelMatches(cleanSub, cleanMain)) categoryTree[cleanMain].add(cleanSub);
-    }
-  }
   for (const item of Object.values(productFilterMap)) {
     const main = clean(item?.[0]);
     const sub = clean(item?.[1]);
@@ -364,10 +354,6 @@ async function readCategoryMetadata() {
     categorySet.add(main);
     categoryTree[main] ??= new Set<string>();
     if (sub && !exactLabelMatches(sub, main)) categoryTree[main].add(sub);
-    for (const label of item?.[2] ?? []) {
-      const cleanLabel = clean(label);
-      if (cleanLabel && !exactLabelMatches(cleanLabel, main)) categoryTree[main].add(cleanLabel);
-    }
   }
   const categories = Array.from(categorySet).sort();
   return {
@@ -392,26 +378,59 @@ async function readHiddenProductIds() {
   }
 }
 
+function filterMapProductIds(productFilterMap: ProductFilterMap, category: string, subCategory: string) {
+  if (!category && !subCategory) return undefined;
+  const ids: string[] = [];
+  for (const [productId, item] of Object.entries(productFilterMap)) {
+    const main = clean(item?.[0]);
+    const sub = clean(item?.[1]);
+    if (category && !exactLabelMatches(main, category)) continue;
+    if (subCategory && !exactLabelMatches(sub, subCategory)) continue;
+    ids.push(productId);
+  }
+  return ids;
+}
+
 async function readDatabaseProductsPage(options: { q: string; category: string; subCategory: string; status: "ALL" | "IN_STOCK" | "OUT_OF_STOCK"; limit: number }) {
   const count = await prisma.product.count();
   if (count < 100) return undefined;
 
   const productFilterMap = await readProductFilterMap();
+  const mappedProductIds = filterMapProductIds(productFilterMap, options.category, options.subCategory);
   const hiddenIds = await readHiddenProductIds();
   const andClauses: Record<string, unknown>[] = [];
-  if (hiddenIds.length > 0) andClauses.push({ id: { notIn: hiddenIds } });
+  if (hiddenIds.length > 0) andClauses.push({ NOT: { OR: [{ id: { in: hiddenIds } }, { sourceProductId: { in: hiddenIds } }] } });
   if (options.status !== "ALL") andClauses.push({ sourceStock: options.status });
-  if (options.category) {
+  if (mappedProductIds) {
+    if (mappedProductIds.length === 0) {
+      const [latest, inStock, outOfStock, metadata] = await Promise.all([
+        prisma.product.findFirst({
+          where: { catalogSyncedAt: { not: null } },
+          orderBy: { catalogSyncedAt: "desc" },
+          select: { catalogSyncedAt: true },
+        }),
+        prisma.product.count({ where: { sourceStock: "IN_STOCK" } }),
+        prisma.product.count({ where: { sourceStock: "OUT_OF_STOCK" } }),
+        readCategoryMetadata(),
+      ]);
+      return {
+        fetchedAt: latest?.catalogSyncedAt?.toISOString() ?? new Date().toISOString(),
+        source: "Yaser Mall online cloud catalog",
+        categoryCount: metadata.categories.length,
+        uniqueProductCount: count,
+        inStock,
+        outOfStock,
+        categories: metadata.categories,
+        categoryTree: metadata.categoryTree,
+        categoryImages: metadata.categoryImages,
+        subCategories: options.category ? metadata.categoryTree[options.category] ?? [] : [],
+        totalFiltered: 0,
+        products: [],
+      } satisfies Catalog & { totalFiltered: number };
+    }
     andClauses.push({ OR: [
-      { mainCategory: options.category },
-      { category: options.category },
-      { allCategories: { array_contains: [options.category] } },
-    ] });
-  }
-  if (options.subCategory) {
-    andClauses.push({ OR: [
-      { subCategory: options.subCategory },
-      { allCategories: { array_contains: [options.subCategory] } },
+      { id: { in: mappedProductIds } },
+      { sourceProductId: { in: mappedProductIds } },
     ] });
   }
   if (options.q) {
