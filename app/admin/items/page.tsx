@@ -18,6 +18,11 @@ function viewMode(value: string | undefined) {
   return "NOT_CHECKED";
 }
 
+function stockMode(value: string | undefined) {
+  if (value === "IN_STOCK" || value === "OUT_OF_STOCK") return value;
+  return "ALL";
+}
+
 export default async function AdminItemsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const query = first(params?.q) ?? "";
@@ -25,9 +30,10 @@ export default async function AdminItemsPage({ searchParams }: PageProps) {
   const subCategory = first(params?.subCategory) ?? "";
   const limit = Number(first(params?.limit) ?? 60);
   const view = viewMode(first(params?.view));
+  const stockStatus = stockMode(first(params?.stock) ?? first(params?.status));
   const [initialData, auditRecords] = await Promise.all([
-    getLiveProductsPage({ q: query, category, subCategory, limit, forceFresh: Boolean(category || subCategory) }),
+    getLiveProductsPage({ q: query, category, subCategory, status: stockStatus, limit, forceFresh: Boolean(category || subCategory || stockStatus !== "ALL") }),
     readAuditMap()
   ]);
-  return <AdminReadyPlan initialData={initialData} auditRecords={auditRecords} initialQuery={query} currentLimit={limit} view={view} refreshedAt={new Date().toISOString()} initialCategory={category} initialSubCategory={subCategory} />;
+  return <AdminReadyPlan initialData={initialData} auditRecords={auditRecords} initialQuery={query} currentLimit={limit} view={view} refreshedAt={new Date().toISOString()} initialCategory={category} initialSubCategory={subCategory} initialStockStatus={stockStatus} />;
 }
