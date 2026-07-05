@@ -24,8 +24,32 @@ function parseJson<T>(text: string) {
 function cleanPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return Number(value.toFixed(2));
   if (typeof value !== "string") return 0;
-  const parsed = Number(value.replace(/[^\d.]/g, ""));
+  const parsed = Number(value.replace(/,/g, "").replace(/[^\d.]/g, ""));
   return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : 0;
+}
+
+function salePriceFromLiveProduct(live: Record<string, unknown>) {
+  const keys = [
+    "special",
+    "formatted_special",
+    "special_price",
+    "formatted_special_price",
+    "discount_price",
+    "formatted_discount_price",
+    "sale_price",
+    "formatted_sale_price",
+    "final_price",
+    "formatted_final_price",
+    "new_price",
+    "formatted_new_price",
+  ];
+
+  for (const key of keys) {
+    const price = cleanPrice(live[key]);
+    if (price > 0) return price;
+  }
+
+  return cleanPrice(live.price) || cleanPrice(live.formatted_price);
 }
 
 function liveStock(product: { quantity?: unknown; stock_status?: unknown }) {
@@ -116,7 +140,7 @@ async function getLiveApiProduct(productId: string) {
 }
 
 function mergeLiveProduct(product: ReadyProduct, live: Record<string, unknown>): ReadyProduct {
-  const price = cleanPrice(live.special) || cleanPrice(live.formatted_special) || cleanPrice(live.price) || cleanPrice(live.formatted_price) || product.priceJod;
+  const price = salePriceFromLiveProduct(live) || product.priceJod;
   const quantity = Number(live.quantity ?? product.quantity ?? 0);
   const name = String(live.name ?? product.arabicName ?? "");
   const englishName = String(live.name_en ?? live.en_name ?? product.englishName ?? name);
