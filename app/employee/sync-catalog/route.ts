@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { syncExistingCatalogFromYaser } from "@/lib/catalog-sync";
+import { shouldRunFullCatalogRefresh, syncCatalogToDatabase } from "@/lib/catalog-db";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -8,11 +9,13 @@ export async function POST(request: NextRequest) {
   const requestedMax = String(formData.get("maxProducts") || "");
   const maxProducts = Math.max(1, Number(requestedMax || process.env.LIVE_SYNC_MAX_PRODUCTS || 240));
   const result = await syncExistingCatalogFromYaser({ maxProducts });
+  const mode = await shouldRunFullCatalogRefresh() ? "full" : "newOnly";
+  const database = await syncCatalogToDatabase({ mode });
   revalidatePath("/employee");
   revalidatePath("/admin/items");
   revalidatePath("/dashboard");
   if (request.headers.get("accept")?.includes("application/json")) {
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, ...result, database });
   }
   const safeReturnTo = returnTo.startsWith("/employee") ? returnTo : "/employee";
   return NextResponse.redirect(new URL(safeReturnTo, request.url), { status: 303 });
