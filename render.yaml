@@ -16,9 +16,9 @@ services:
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
       - key: SCRAPER_MAX_PRODUCTS
-        value: "1200"
+        value: "0"
       - key: LIVE_SYNC_MAX_PRODUCTS
-        value: "1200"
+        value: "0"
       - key: CRON_SECRET
         value: yaser-mall-nightly-sync-2026
 
