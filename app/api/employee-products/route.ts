@@ -55,6 +55,7 @@ let cachedCatalog: Catalog | null = null;
 let cachedCatalogKey = "";
 let cachedVisibleKey = "";
 let cachedVisibleData: { categories: string[]; categoryTree: Record<string, string[]>; categoryImages: Record<string, string> } | null = null;
+const livePriceCache = new Map<string, { price: number; expiresAt: number }>();
 
 async function readJson<T>(file: string) {
   const text = await readFile(file, "utf8");
@@ -299,6 +300,73 @@ function clean(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+function cleanPrice(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Number(value.toFixed(2));
+  if (typeof value !== "string") return 0;
+  const parsed = Number(value.replace(/,/g, "").replace(/[^\d.]/g, ""));
+  return Number.isFinite(parsed) && parsed > 0 ? Number(parsed.toFixed(2)) : 0;
+}
+
+function liveSalePrice(live: Record<string, unknown>) {
+  const saleFields = [
+    "special",
+    "formatted_special",
+    "special_price",
+    "formatted_special_price",
+    "discount_price",
+    "formatted_discount_price",
+    "sale_price",
+    "formatted_sale_price",
+    "final_price",
+    "formatted_final_price",
+    "new_price",
+    "formatted_new_price",
+  ];
+
+  for (const field of saleFields) {
+    const price = cleanPrice(live[field]);
+    if (price > 0) return price;
+  }
+
+  return cleanPrice(live.price) || cleanPrice(live.formatted_price);
+}
+
+async function getLivePrice(productId: string) {
+  const cached = livePriceCache.get(productId);
+  if (cached && cached.expiresAt > Date.now()) return cached.price;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetch(`https://api.yasermallonline.com/index.php?route=api/wkrestapi/catalog/getProduct&product_id=${encodeURIComponent(productId)}&width=400`, {
+      signal: controller.signal,
+      headers: {
+        accept: "application/json, text/plain, */*",
+        origin: "https://yasermallonline.com",
+        referer: "https://yasermallonline.com/",
+      },
+    });
+    if (!response.ok) return 0;
+    const price = liveSalePrice(await response.json() as Record<string, unknown>);
+    if (price > 0) livePriceCache.set(productId, { price, expiresAt: Date.now() + 60 * 60 * 1000 });
+    return price;
+  } catch {
+    return 0;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fillMissingLivePrices(products: Product[]) {
+  const missing = products.filter((product) => cleanPrice(product.priceJod) <= 0).slice(0, 24);
+  const prices = await Promise.all(missing.map((product) => getLivePrice(String(product.id))));
+  const byId = new Map(missing.map((product, index) => [String(product.id), prices[index]]));
+  return products.map((product) => {
+    const price = byId.get(String(product.id)) ?? 0;
+    return price > 0 ? { ...product, priceJod: price } : product;
+  });
+}
+
 function bestSubCategory(product: Product) {
   const current = clean(product.subCategory);
   if (current) return current;
@@ -453,10 +521,10 @@ export async function GET(request: NextRequest) {
           return matchesCategory && matchesSub && (!q || searchText.includes(q));
         })
       : statusProducts;
-    const responseProducts = filtered.slice(0, limit).map((product) => ({
+    const responseProducts = await fillMissingLivePrices(filtered.slice(0, limit).map((product) => ({
       ...product,
       subCategory: bestSubCategory(product),
-    }));
+    })));
 
     return NextResponse.json({
       fetchedAt: catalog.fetchedAt ?? new Date().toISOString(),
