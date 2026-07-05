@@ -381,8 +381,6 @@
 
     <section class="metrics" aria-label="Product totals">
       <article class="metric"><span>Products</span><strong id="totalCount">0</strong></article>
-      <article class="metric green"><span>Enabled</span><strong id="enabledCount">0</strong></article>
-      <article class="metric red"><span>Disabled</span><strong id="disabledCount">0</strong></article>
       <article class="metric amber"><span>Zero stock</span><strong id="zeroCount">0</strong></article>
       <article class="metric blue"><span>Reviewed</span><strong id="reviewedCount">0</strong></article>
       <article class="metric"><span>Pending</span><strong id="pendingCount">0</strong></article>
@@ -390,7 +388,6 @@
 
     <section class="controls" aria-label="Product filters">
       <label class="search"><span>Search</span><input id="query" placeholder="Arabic, English, barcode, product ID"></label>
-      <label><span>Status</span><select id="statusFilter"><option value="all">all</option><option>Enabled</option><option>Disabled</option></select></label>
       <label><span>Stock</span><select id="stockFilter"><option value="all">all</option><option value="in">in</option><option value="zero">zero</option><option value="large">large</option></select></label>
       <label><span>Review</span><select id="reviewFilter"><option value="all">all</option><option value="pending">pending</option><option value="yes">yes</option><option value="no">no</option></select></label>
       <label><span>Sort</span><select id="sortFilter"><option value="date">date</option><option value="name">name</option><option value="quantity">quantity</option><option value="price">price</option></select></label>
@@ -522,8 +519,6 @@
     function renderMetrics() {
       const reviewed = Object.keys(state.reviews).filter((id) => state.products.some((product) => product.product_id === id)).length;
       el("totalCount").textContent = state.products.length.toLocaleString();
-      el("enabledCount").textContent = state.products.filter((product) => product.status === "Enabled").length.toLocaleString();
-      el("disabledCount").textContent = state.products.filter((product) => product.status === "Disabled").length.toLocaleString();
       el("zeroCount").textContent = state.products.filter((product) => numberValue(product.quantity) === 0).length.toLocaleString();
       el("reviewedCount").textContent = reviewed.toLocaleString();
       el("pendingCount").textContent = Math.max(state.products.length - reviewed, 0).toLocaleString();
@@ -635,9 +630,9 @@
       else renderEmployee(rows);
     }
 
-    ["query", "statusFilter", "stockFilter", "reviewFilter", "sortFilter"].forEach((id) => {
+    ["query", "stockFilter", "reviewFilter", "sortFilter"].forEach((id) => {
       el(id).addEventListener("input", (event) => {
-        const key = id === "statusFilter" ? "status" : id === "stockFilter" ? "stock" : id === "reviewFilter" ? "review" : id === "sortFilter" ? "sort" : "query";
+        const key = id === "stockFilter" ? "stock" : id === "reviewFilter" ? "review" : id === "sortFilter" ? "sort" : "query";
         state[key] = event.target.value;
         state.page = 1;
         render();
