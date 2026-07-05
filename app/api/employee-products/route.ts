@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { isHiddenForAudit, readAuditMap } from "@/lib/audit-store";
@@ -51,6 +51,7 @@ const fallbackProducts: Product[] = [
 ];
 
 let cachedCatalog: Catalog | null = null;
+let cachedCatalogKey = "";
 let cachedVisibleKey = "";
 let cachedVisibleData: { categories: string[]; categoryTree: Record<string, string[]>; categoryImages: Record<string, string> } | null = null;
 
@@ -65,6 +66,26 @@ async function readOptionalCatalog(file: string) {
   } catch {
     return undefined;
   }
+}
+
+async function fileMtime(file: string) {
+  try {
+    return String((await stat(file)).mtimeMs);
+  } catch {
+    return "missing";
+  }
+}
+
+async function catalogCacheKey() {
+  const root = process.cwd();
+  const files = [
+    path.join(root, "public", "yaser-live-products.txt"),
+    path.join(root, "public", "yaser-live-instock-products.json"),
+    path.join(root, "public", "yaser-live-instock-products.txt"),
+    path.join(root, "data", "fast-catalog.json"),
+    path.join(root, "data", "yaser-category-map.json"),
+  ];
+  return (await Promise.all(files.map(fileMtime))).join(":");
 }
 
 async function readFullLiveCatalog() {
@@ -140,7 +161,8 @@ async function readBestFallbackCatalog() {
 }
 
 async function readCatalog() {
-  if (cachedCatalog) return cachedCatalog;
+  const nextCacheKey = await catalogCacheKey();
+  if (cachedCatalog && cachedCatalogKey === nextCacheKey) return cachedCatalog;
 
   try {
     const full = await readFullLiveCatalog();
@@ -190,6 +212,9 @@ async function readCatalog() {
     cachedCatalog.products = fallbackProducts;
   }
 
+  cachedCatalogKey = nextCacheKey;
+  cachedVisibleKey = "";
+  cachedVisibleData = null;
   return cachedCatalog;
 }
 
@@ -249,6 +274,16 @@ function labelMatches(left: string, right: string) {
 
 function productMatchesLabel(product: Product, label: string) {
   return productCategoryLabels(product).some((productLabel) => labelMatches(productLabel, label));
+}
+
+function productMatchesMainCategory(product: Product, category: string) {
+  if (!category) return true;
+  return [product.mainCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, category));
+}
+
+function productMatchesSubCategory(product: Product, subCategory: string) {
+  if (!subCategory) return true;
+  return [product.subCategory, ...(product.allCategories ?? [])].map(clean).filter(Boolean).some((label) => labelMatches(label, subCategory));
 }
 
 function categoryImageFor(categoryImages: Record<string, string>, products: Product[], category: string) {
@@ -332,8 +367,8 @@ export async function GET(request: NextRequest) {
       ? statusProducts.filter((product) => {
           const labels = productCategoryLabels(product);
           const searchText = [product.id, product.englishName, product.arabicName, product.brand, ...labels].join(" ").toLowerCase();
-          const matchesCategory = !category || (subCategory ? true : productMatchesLabel(product, category));
-          const matchesSub = !subCategory || productMatchesLabel(product, subCategory);
+          const matchesCategory = productMatchesMainCategory(product, category);
+          const matchesSub = productMatchesSubCategory(product, subCategory);
           return matchesCategory && matchesSub && (!q || searchText.includes(q));
         })
       : statusProducts;
