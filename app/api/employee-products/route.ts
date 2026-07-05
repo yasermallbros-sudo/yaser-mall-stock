@@ -1,5 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
+import { Buffer } from "node:buffer";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import { NextRequest, NextResponse } from "next/server";
 import { isHiddenForAudit, readAuditMap } from "@/lib/audit-store";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +36,8 @@ type Catalog = {
   products?: Product[];
 };
 
+type ProductFilterMap = Record<string, [string, string, string[]]>;
+
 const fallbackProducts: Product[] = [
   {
     id: "starter-product",
@@ -55,6 +59,8 @@ let cachedCatalog: Catalog | null = null;
 let cachedCatalogKey = "";
 let cachedVisibleKey = "";
 let cachedVisibleData: { categories: string[]; categoryTree: Record<string, string[]>; categoryImages: Record<string, string> } | null = null;
+let cachedProductFilterMap: ProductFilterMap | null = null;
+let cachedProductFilterMapMtime = "";
 const livePriceCache = new Map<string, { price: number; expiresAt: number }>();
 
 async function readJson<T>(file: string) {
@@ -86,6 +92,8 @@ async function catalogCacheKey() {
     path.join(root, "public", "yaser-live-instock-products.txt"),
     path.join(root, "data", "fast-catalog.json"),
     path.join(root, "data", "yaser-category-map.json"),
+    path.join(root, "data", "yaser-product-filter-map.json"),
+    path.join(root, "data", "yaser-product-filter-map.json.gz.b64"),
   ];
   let dbKey = "db-missing";
   try {
@@ -180,9 +188,33 @@ function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.map(clean).filter(Boolean) : [];
 }
 
+async function readProductFilterMap() {
+  const jsonFile = path.join(process.cwd(), "data", "yaser-product-filter-map.json");
+  const compressedFile = path.join(process.cwd(), "data", "yaser-product-filter-map.json.gz.b64");
+  const mtime = `${await fileMtime(jsonFile)}:${await fileMtime(compressedFile)}`;
+  if (cachedProductFilterMap && cachedProductFilterMapMtime === mtime) return cachedProductFilterMap;
+  try {
+    cachedProductFilterMap = await readJson<ProductFilterMap>(jsonFile);
+    cachedProductFilterMapMtime = mtime;
+    return cachedProductFilterMap;
+  } catch {
+    try {
+      const compressed = (await readFile(compressedFile, "utf8")).trim();
+      cachedProductFilterMap = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as ProductFilterMap;
+      cachedProductFilterMapMtime = mtime;
+      return cachedProductFilterMap;
+    } catch {
+      cachedProductFilterMap = {};
+      cachedProductFilterMapMtime = mtime;
+      return cachedProductFilterMap;
+    }
+  }
+}
+
 async function readDatabaseCatalog(): Promise<Catalog | undefined> {
   const count = await prisma.product.count();
   if (count < 100) return undefined;
+  const productFilterMap = await readProductFilterMap();
 
   const rows = await prisma.product.findMany({
     select: {
@@ -203,20 +235,25 @@ async function readDatabaseCatalog(): Promise<Catalog | undefined> {
     },
   });
 
-  const products: Product[] = rows.map((row) => ({
-    id: row.sourceProductId || row.id,
-    englishName: row.englishName,
-    arabicName: row.arabicName,
-    priceJod: Number(row.price ?? 0),
-    imageUrl: row.imageUrl,
-    brand: row.brand,
-    mainCategory: row.mainCategory,
-    subCategory: row.subCategory,
-    sourceStock: row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK",
-    quantity: row.quantity === null ? null : Number(row.quantity),
-    allCategories: asStringArray(row.allCategories),
-    productUrl: row.productUrl,
-  }));
+  const products: Product[] = rows.map((row) => {
+    const id = row.sourceProductId || row.id;
+    const mapped = productFilterMap[String(id)];
+    const mappedAll = Array.isArray(mapped?.[2]) ? mapped[2].map(clean).filter(Boolean) : [];
+    return {
+      id,
+      englishName: row.englishName,
+      arabicName: row.arabicName,
+      priceJod: Number(row.price ?? 0),
+      imageUrl: row.imageUrl,
+      brand: row.brand,
+      mainCategory: clean(mapped?.[0]) || row.mainCategory,
+      subCategory: clean(mapped?.[1]) || row.subCategory,
+      sourceStock: row.sourceStock === "OUT_OF_STOCK" ? "OUT_OF_STOCK" : "IN_STOCK",
+      quantity: row.quantity === null ? null : Number(row.quantity),
+      allCategories: mappedAll.length > 0 ? mappedAll : asStringArray(row.allCategories),
+      productUrl: row.productUrl,
+    };
+  });
   const fetchedAt = rows.reduce<Date | undefined>((latest, row) => {
     if (!row.catalogSyncedAt) return latest;
     return !latest || row.catalogSyncedAt > latest ? row.catalogSyncedAt : latest;
