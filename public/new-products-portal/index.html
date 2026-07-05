@@ -240,6 +240,15 @@
       line-height: 1.4;
       word-break: break-word;
     }
+    .price-value {
+      display: inline-flex;
+      align-items: center;
+      color: #273444;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
     .time-value {
       white-space: nowrap;
     }
@@ -332,6 +341,11 @@
       color: #344054;
       font-size: 12px;
       font-weight: 700;
+    }
+    .facts span.price-value {
+      color: #273444;
+      font-size: 15px;
+      font-weight: 800;
     }
 
     .pager {
@@ -564,7 +578,7 @@
                 <tr>
                   <td><span class="product-id">#${esc(product.product_id)}</span><strong class="arabic-name" dir="rtl">${esc(productDisplayName(product))}</strong></td>
                   <td><span class="barcode-value">${esc(productBarcode(product))}</span></td>
-                  <td>${esc(money(product.price))} JD</td>
+                  <td><span class="price-value">${esc(money(product.price))} JD</span></td>
                   <td>${esc(qty(product.quantity))}</td>
                   <td><span class="time-value">${esc(productDateTime(product))}</span></td>
                   <td>${reviewPill(product)}</td>
@@ -588,7 +602,7 @@
                 <p class="barcode-value">${esc(productBarcode(product))}</p>
               </div>
               <div class="facts">
-                <span>${esc(money(product.price))} JD</span>
+                <span class="price-value">${esc(money(product.price))} JD</span>
                 <span>${esc(qty(product.quantity))} qty</span>
                 <span class="time-value">${esc(productDateTime(product))}</span>
               </div>
