@@ -303,7 +303,11 @@ async function readCatalog() {
   if (cachedCatalog && cachedCatalogKey === nextCacheKey) return cachedCatalog;
 
   try {
-    const full = await readFullLiveCatalog().catch(async () => await readDatabaseCatalog());
+    const [fullCatalog, databaseCatalog] = await Promise.all([
+      readFullLiveCatalog().catch(() => undefined),
+      readDatabaseCatalog().catch(() => undefined),
+    ]);
+    const full = chooseFreshCatalog(fullCatalog, databaseCatalog);
     if (!full) throw new Error("No full catalog is available.");
     const fast = await readOptionalCatalog(path.join(process.cwd(), "data", "fast-catalog.json"));
     const map = await readOptionalCatalog(path.join(process.cwd(), "data", "yaser-category-map.json"));
@@ -355,6 +359,22 @@ async function readCatalog() {
   cachedVisibleKey = "";
   cachedVisibleData = null;
   return cachedCatalog;
+}
+
+function catalogTime(catalog: Catalog | undefined) {
+  const time = new Date(catalog?.fetchedAt ?? "").getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function chooseFreshCatalog(fullCatalog: Catalog | undefined, databaseCatalog: Catalog | undefined) {
+  if (!fullCatalog) return databaseCatalog;
+  if (!databaseCatalog) return fullCatalog;
+  const fullCount = fullCatalog.products?.length ?? 0;
+  const databaseCount = databaseCatalog.products?.length ?? 0;
+  const databaseHasEnoughProducts = fullCount === 0 || databaseCount >= Math.floor(fullCount * 0.8);
+  return databaseHasEnoughProducts && catalogTime(databaseCatalog) >= catalogTime(fullCatalog)
+    ? databaseCatalog
+    : fullCatalog;
 }
 
 function normalizeStock(value: string | null) {
