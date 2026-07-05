@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isHiddenForAudit, readAuditMap } from "@/lib/audit-store";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Product = {
   id: string;
   englishName?: string | null;
@@ -118,6 +121,19 @@ async function readFullLiveCatalog() {
     const compressed = (await readFile(path.join(process.cwd(), "data", "yaser-live-products.full.json.gz.b64"), "utf8")).trim();
     const catalog = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as Catalog;
     if (Array.isArray(catalog.products) && catalog.products.length > 100) return catalog;
+  } catch {
+    // Fall back to GitHub raw or public product parts.
+  }
+
+  try {
+    const response = await fetch("https://raw.githubusercontent.com/yasermallbros-sudo/yaser-mall-stock/main/data/yaser-live-products.full.json.gz.b64", {
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const compressed = (await response.text()).trim();
+      const catalog = JSON.parse(gunzipSync(Buffer.from(compressed, "base64")).toString("utf8")) as Catalog;
+      if (Array.isArray(catalog.products) && catalog.products.length > 100) return catalog;
+    }
   } catch {
     // Fall back to public product parts or the cloud database.
   }
@@ -645,6 +661,10 @@ export async function GET(request: NextRequest) {
       subCategories: category ? visibleCategories.categoryTree[category] ?? [] : [],
       totalFiltered: filtered.length,
       products: responseProducts,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   } catch {
     return NextResponse.json({
@@ -660,6 +680,10 @@ export async function GET(request: NextRequest) {
       categoryImages: { Starter: "/placeholder.svg" },
       totalFiltered: 1,
       products: fallbackProducts,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   }
 }
