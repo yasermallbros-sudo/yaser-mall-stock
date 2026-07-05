@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const returnTo = String(formData.get("returnTo") || "/employee");
   const requestedMax = String(formData.get("maxProducts") || "");
-  const maxProducts = Math.max(1, Number(requestedMax || process.env.LIVE_SYNC_MAX_PRODUCTS || 240));
+  const rawMaxProducts = Number(requestedMax || process.env.LIVE_SYNC_MAX_PRODUCTS || 0);
+  const maxProducts = rawMaxProducts <= 0 ? 0 : Math.max(1, rawMaxProducts);
   const result = await syncExistingCatalogFromYaser({ maxProducts });
   const mode = await shouldRunFullCatalogRefresh() ? "full" : "newOnly";
   const database = await syncCatalogToDatabase({ mode });
